@@ -30,17 +30,21 @@ export default class StringValidator {
         this.errmsg   = ''
     }
 
+    public getValue() : string {
+        return (this.value);
+    }
+
     public trim() : StringValidator {
         this.value = this.value.trim();
         return (this);
     } 
 
-    public lowerCase() : StringValidator {
+    public lCase() : StringValidator {
         this.value = this.value.toLowerCase();
         return (this);
     }
 
-    public upperCase() : StringValidator {
+    public uCase() : StringValidator {
         this.value = this.value.toUpperCase();
         return (this);
     }

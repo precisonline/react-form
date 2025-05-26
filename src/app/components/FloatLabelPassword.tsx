@@ -1,22 +1,29 @@
 'use client'
 
 import React from 'react';
+import StringValidator from "../components/StringValidator";
 
 interface FloatLabelPasswordProps {
-    id: string;
+    id:            string;
     defaultValue?: string;
-    prompt: string;
-    val?: (value: string) => string;
+    prompt:        string;
+    val?:          (value:  string) => StringValidator;
 }
 
 export default function FloatLabelPassword({id, prompt, defaultValue, val} : FloatLabelPasswordProps) : React.JSX.Element {
+    const [ value, setValue ] = React.useState<string>(defaultValue || '');
     const [ errorMessage, setErrorMessage ] = React.useState<string>('');
+
     function validate(event: React.ChangeEvent<HTMLInputElement>) {
+        setValue(event.target.value);
         if (val) {
-            const errmsg = val(event.target.value);
-            setErrorMessage(errmsg);
+            const validator = val(event.target.value);
+            setErrorMessage(validator.getErrors());
+            if (validator.isValid()) {
+                setValue(validator.getValue());
+            }
         }
-    }    
+    }
     
     return(
         <div className="relative mb-4 mt-3">

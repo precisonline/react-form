@@ -1,20 +1,36 @@
 'use client'
 
-import React from 'react';
+import React           from 'react';
+import StringValidator from "../components/StringValidator";
 
 interface FloatLabelSelectProps {
     id: string;
     values?: object;
     prompt: string;
+    val?: (value: string) => StringValidator;
 }
 
-export default function FloatLabelSelect({ id, prompt, values } : FloatLabelSelectProps) : React.JSX.Element {
+export default function FloatLabelSelect({ id, prompt, values, val } : FloatLabelSelectProps) : React.JSX.Element {
+    const [ value, setValue ] = React.useState<string>('');
+    const [ errorMessage, setErrorMessage ] = React.useState<string>('');
+    
+    function validate(event: React.ChangeEvent<HTMLSelectElement>) {
+        setValue(event.target.value);
+        if (val) {
+            const validator = val(event.target.value);
+            setErrorMessage(validator.getErrors());
+            if (validator.isValid()) {
+                setValue(validator.getValue());
+            }
+        }
+    }
+
     return(
         <div className="relative mb-4 mt-3">
-            <select id={id} name={id} className="peer h-10 p-2 w-full rounded-md placeholder-transparent border border-gray-300 text-gray-800 outline-none focus:border-[3px] focus:border-blue-400 focus:ring-0">
+            <select id={id} name={id} value={value} onChange={validate} className="peer h-10 p-2 w-full rounded-md placeholder-transparent border border-gray-300 text-gray-800 outline-none focus:border-[3px] focus:border-blue-400 focus:ring-0">
                 {
-                    values ? Object.entries(values).map(([key, value]) => (
-                        <option key={key} value={key}>{value}</option>
+                    values ? Object.entries(values).map(([key, desc]) => (
+                        <option key={key} value={key}>{desc}</option>
                     )) : null
                 }
             </select>

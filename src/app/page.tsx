@@ -1,3 +1,5 @@
+'use client'
+
 import FloatLabelPassword from './components/FloatLabelPassword';
 import FloatLabelSelect   from './components/FloatLabelSelect';
 import FloatLabelText     from './components/FloatLabelText';
@@ -21,11 +23,16 @@ export default function Home() {
     "VA": "Virginia", "WA": "Washington", "WV": "West Virginia", "WI": "Wisconsin",
     "WY": "Wyoming"};
 
+  function postIt(formData : FormData) {
+    const formValues = Object.fromEntries(formData.entries());
+    console.log(formValues);
+  }
+
   return (
     <>
       <div className="p-[2rem]">
       <h1 className="text-[2rem]">Customer Entry</h1>
-      <form className="flex flex-col p-4">
+      <form className="flex flex-col p-4" action={ postIt }> 
         <FloatLabelText     id="name"     prompt="Name"          val={v.validateName}      />
         <FloatLabelPassword id="password" prompt="Password"      val={v.validatePassword}  />
         <FloatLabelText     id="addr"     prompt="Address"                                 />
@@ -35,8 +42,7 @@ export default function Home() {
         <FloatLabelText     id="email"    prompt="Email Address" val={v.validateEmail}     />
         <FloatLabelText     id="phone"    prompt="Phone Number"  val={v.validatePhone}     />
         <FloatLabelTextArea id="comments" prompt="Comments"      val={v.validateComments}  />
-        <input type="Submit" className="p-3 bg-blue-600 br-2 text-white bold
-         text-rounded-md" />
+        <button type="submit" className="p-3 bg-blue-600 br-2 text-white bold text-rounded-md">Submit</button>
       </form>
       </div>
     </>
