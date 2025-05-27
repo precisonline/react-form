@@ -14,7 +14,7 @@ interface FloatLabelTextProps {
 }
 
 export default function FloatLabelText({ id, prompt, control }: FloatLabelTextProps): React.JSX.Element {
-    const { field, fieldState } = useController({ name: id, control, defaultValue: '' });
+    const { field, fieldState } = useController({ name: id, control });
 
     return (
         <div className="relative mb-4 mt-3">

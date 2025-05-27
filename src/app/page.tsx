@@ -8,32 +8,35 @@ import FloatLabelTextArea from './components/FloatLabelTextArea';
 import { CustomerSchema, CustomerType } from './validation/CustomerValidation';
 import { SubmitHandler, useForm }       from 'react-hook-form';
 import { zodResolver }    from '@hookform/resolvers/zod';
+import { states }         from './data/states';
+import { useSearchParams } from 'next/navigation';
 
 export default function Home() {
-  const { control, handleSubmit } = useForm<CustomerType, any, CustomerType>({
+
+  const searchParams = useSearchParams(); /* for reading URLs */
+  
+  const record = {
+    name    : 'Testing',
+    password: 'abcdef45!!',
+    addr    : 'address',
+    city    : 'city',
+    state   : 'IN',
+    zip     : '47150',
+    email   : 'email@email.com',
+    phone   : '303-651-7050',
+    comments: 'testing'
+  }
+  const { control, handleSubmit } = useForm<CustomerType>({
     resolver: zodResolver(CustomerSchema),
-    mode: 'onChange'
+    mode: 'onChange',
+    defaultValues: record
   });
 
   const onSubmit : SubmitHandler<CustomerType> = (data) => {
     console.log(data);
   }
   
-  const states = {"" : "","AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas",
-    "CA": "California", "CO": "Colorado", "CT": "Connecticut", "DE": "Delaware",
-    "FL": "Florida", "GA": "Georgia", "HI": "Hawaii", "ID": "Idaho", "IL": "Illinois",
-    "IN": "Indiana", "IA": "Iowa", "KS": "Kansas", "KY": "Kentucky", "LA": "Louisiana",
-    "ME": "Maine", "MD": "Maryland", "MA": "Massachusetts", "MI": "Michigan",
-    "MN": "Minnesota", "MS": "Mississippi", "MO": "Missouri", "MT": "Montana",
-    "NE": "Nebraska", "NV": "Nevada", "NH": "New Hampshire", "NJ": "New Jersey",
-    "NM": "New Mexico", "NY": "New York", "NC": "North Carolina", "ND": "North Dakota",
-    "OH": "Ohio", "OK": "Oklahoma", "OR": "Oregon", "PA": "Pennsylvania",
-    "RI": "Rhode Island", "SC": "South Carolina", "SD": "South Dakota",
-    "TN": "Tennessee", "TX": "Texas", "UT": "Utah", "VT": "Vermont",
-    "VA": "Virginia", "WA": "Washington", "WV": "West Virginia", "WI": "Wisconsin",
-    "WY": "Wyoming"};
-
-    return (
+  return (
     <>
       <div className="p-[2rem]">
       <h1 className="text-[2rem]">Customer Entry</h1>
