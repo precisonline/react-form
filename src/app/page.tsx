@@ -1,14 +1,24 @@
 'use client'
 
+import React              from 'react';
 import FloatLabelPassword from './components/FloatLabelPassword';
 import FloatLabelSelect   from './components/FloatLabelSelect';
 import FloatLabelText     from './components/FloatLabelText';
 import FloatLabelTextArea from './components/FloatLabelTextArea';
-import * as v             from './validation/CustomerValidation';
-import StringValidator    from './components/StringValidator';
-import React              from 'react';
+import { CustomerSchema, CustomerType } from './validation/CustomerValidation';
+import { SubmitHandler, useForm }       from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 
 export default function Home() {
+  const { control, handleSubmit } = useForm<CustomerType>({
+    resolver: zodResolver(CustomerSchema),
+    mode: 'onChange'
+  });
+
+  const onSubmit : SubmitHandler<CustomerType> = (data) => {
+    console.log(data);
+  }
+  
   const states = {"" : "","AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas",
     "CA": "California", "CO": "Colorado", "CT": "Connecticut", "DE": "Delaware",
     "FL": "Florida", "GA": "Georgia", "HI": "Hawaii", "ID": "Idaho", "IL": "Illinois",
@@ -23,25 +33,20 @@ export default function Home() {
     "VA": "Virginia", "WA": "Washington", "WV": "West Virginia", "WI": "Wisconsin",
     "WY": "Wyoming"};
 
-  function postIt(formData : FormData) {
-    const formValues = Object.fromEntries(formData.entries());
-    console.log(formValues);
-  }
-
-  return (
+    return (
     <>
       <div className="p-[2rem]">
       <h1 className="text-[2rem]">Customer Entry</h1>
-      <form className="flex flex-col p-4" action={ postIt }> 
-        <FloatLabelText     id="name"     prompt="Name"          val={v.validateName}      />
-        <FloatLabelPassword id="password" prompt="Password"      val={v.validatePassword}  />
-        <FloatLabelText     id="addr"     prompt="Address"                                 />
-        <FloatLabelText     id="city"     prompt="City"                                    />
-        <FloatLabelSelect   id="state"    prompt="State"    values={states}                />
-        <FloatLabelText     id="zip"      prompt="Postal Code"                             />
-        <FloatLabelText     id="email"    prompt="Email Address" val={v.validateEmail}     />
-        <FloatLabelText     id="phone"    prompt="Phone Number"  val={v.validatePhone}     />
-        <FloatLabelTextArea id="comments" prompt="Comments"      val={v.validateComments}  />
+      <form className="flex flex-col p-4" onSubmit={handleSubmit(onSubmit)} > 
+        <FloatLabelText     id="name"     prompt="Name"          control={control} />
+        <FloatLabelPassword id="password" prompt="Password"      control={control} />
+        <FloatLabelText     id="city"     prompt="City"          control={control} />
+        <FloatLabelText     id="addr"     prompt="Address"       control={control} />
+        <FloatLabelSelect   id="state"    prompt="State"         control={control} values={states} />
+        <FloatLabelText     id="zip"      prompt="Postal Code"   control={control} />
+        <FloatLabelText     id="email"    prompt="Email Address" control={control} />
+        <FloatLabelText     id="phone"    prompt="Phone Number"  control={control} />
+        <FloatLabelTextArea id="comments" prompt="Comments"      control={control} />
         <button type="submit" className="p-3 bg-blue-600 br-2 text-white bold text-rounded-md">Submit</button>
       </form>
       </div>
