@@ -1,55 +1,92 @@
 'use client'
 
-import React              from 'react';
-import FloatLabelPassword from './components/FloatLabelPassword';
-import FloatLabelSelect   from './components/FloatLabelSelect';
-import FloatLabelText     from './components/FloatLabelText';
-import FloatLabelTextArea from './components/FloatLabelTextArea';
-import { CustomerSchema, CustomerType } from './validation/CustomerValidation';
-import { SubmitHandler, useForm }       from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import React from 'react'
+import FloatLabelPassword from './components/FloatLabelPassword'
+import FloatLabelSelect from './components/FloatLabelSelect'
+import FloatLabelText from './components/FloatLabelText'
+import FloatLabelTextArea from './components/FloatLabelTextArea'
+import { states } from './data/states' // Moved the states data to a separate file for better organization and reusability
+import { CustomerSchema, CustomerType } from './validation/CustomerValidation'
+import { SubmitHandler, useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 
 export default function Home() {
   const { control, handleSubmit } = useForm<CustomerType>({
     resolver: zodResolver(CustomerSchema),
-    mode: 'onChange'
-  });
+    mode: 'onChange',
+    defaultValues: {
+      name: '',
+      password: '',
+      address: '',
+      city: '',
+      state: '',
+      zip: '',
+      email: '',
+      phone: '',
+      comments: '',
+    },
+  })
 
-  const onSubmit : SubmitHandler<CustomerType> = (data) => {
-    console.log(data);
+  /* 
+Add the defaultValues property to your UseForm configuration, matching the keys in your CustomerType schema. This ensures that the form starts with empty fields, which is useful for a new customer entry form and keeps the "single source of truth" principle.
+It also makes it so that the form is controlled, meaning React Hook Form will manage the state of the form inputs, and you can easily access the values when the form is submitted or when you need to reset the form.
+It also makes the component more predictable and easier to test, and makes it reusable in different contexts.
+IDs were changed to names also because the `name` attribute is what React Hook Form uses to identify the fields, and it should match the keys in your validation schema.
+*/
+
+  const onSubmit: SubmitHandler<CustomerType> = (data) => {
+    console.log(data)
   }
-  
-  const states = {"" : "","AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas",
-    "CA": "California", "CO": "Colorado", "CT": "Connecticut", "DE": "Delaware",
-    "FL": "Florida", "GA": "Georgia", "HI": "Hawaii", "ID": "Idaho", "IL": "Illinois",
-    "IN": "Indiana", "IA": "Iowa", "KS": "Kansas", "KY": "Kentucky", "LA": "Louisiana",
-    "ME": "Maine", "MD": "Maryland", "MA": "Massachusetts", "MI": "Michigan",
-    "MN": "Minnesota", "MS": "Mississippi", "MO": "Missouri", "MT": "Montana",
-    "NE": "Nebraska", "NV": "Nevada", "NH": "New Hampshire", "NJ": "New Jersey",
-    "NM": "New Mexico", "NY": "New York", "NC": "North Carolina", "ND": "North Dakota",
-    "OH": "Ohio", "OK": "Oklahoma", "OR": "Oregon", "PA": "Pennsylvania",
-    "RI": "Rhode Island", "SC": "South Carolina", "SD": "South Dakota",
-    "TN": "Tennessee", "TX": "Texas", "UT": "Utah", "VT": "Vermont",
-    "VA": "Virginia", "WA": "Washington", "WV": "West Virginia", "WI": "Wisconsin",
-    "WY": "Wyoming"};
 
-    return (
+  return (
     <>
-      <div className="p-[2rem]">
-      <h1 className="text-[2rem]">Customer Entry</h1>
-      <form className="flex flex-col p-4" onSubmit={handleSubmit(onSubmit)} > 
-        <FloatLabelText     id="name"     prompt="Name"          control={control} />
-        <FloatLabelPassword id="password" prompt="Password"      control={control} />
-        <FloatLabelText     id="city"     prompt="City"          control={control} />
-        <FloatLabelText     id="addr"     prompt="Address"       control={control} />
-        <FloatLabelSelect   id="state"    prompt="State"         control={control} values={states} />
-        <FloatLabelText     id="zip"      prompt="Postal Code"   control={control} />
-        <FloatLabelText     id="email"    prompt="Email Address" control={control} />
-        <FloatLabelText     id="phone"    prompt="Phone Number"  control={control} />
-        <FloatLabelTextArea id="comments" prompt="Comments"      control={control} />
-        <button type="submit" className="p-3 bg-blue-600 br-2 text-white bold text-rounded-md">Submit</button>
-      </form>
+      <div className='p-[2rem]'>
+        <h1 className='text-[2rem]'>Customer Entry</h1>
+        <form className='flex flex-col p-4' onSubmit={handleSubmit(onSubmit)}>
+          <FloatLabelText name='name' prompt='Name' control={control} />
+          <FloatLabelPassword
+            name='password'
+            prompt='Password'
+            control={control}
+          />
+          <FloatLabelText name='city' prompt='City' control={control} />
+          <FloatLabelText
+            name='address'
+            prompt='Address'
+            control={control}
+          />{' '}
+          {/* There was a typo in the original code, it should be "address" not "addr"*/}
+          <FloatLabelSelect
+            name='state'
+            prompt='State'
+            control={control}
+            values={states}
+          />
+          <FloatLabelText name='zip' prompt='Postal Code' control={control} />
+          <FloatLabelText
+            name='email'
+            prompt='Email Address'
+            control={control}
+          />
+          <FloatLabelText
+            name='phone'
+            prompt='Phone Number'
+            control={control}
+          />
+          <FloatLabelTextArea
+            name='comments'
+            prompt='Comments'
+            control={control}
+          />
+          <button
+            type='submit'
+            className='p-3 bg-blue-600 rounded-md text-white font-bold'
+          >
+            Submit
+          </button>{' '}
+          {/* Corrected some tailwind classes using what it seemed like you meant, br-2 and bold to rounded-md and font-bold*/}
+        </form>
       </div>
     </>
-  );
+  )
 }
