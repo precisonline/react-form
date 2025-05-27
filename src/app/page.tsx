@@ -7,10 +7,10 @@ import FloatLabelText     from './components/FloatLabelText';
 import FloatLabelTextArea from './components/FloatLabelTextArea';
 import { CustomerSchema, CustomerType } from './validation/CustomerValidation';
 import { SubmitHandler, useForm }       from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { zodResolver }    from '@hookform/resolvers/zod';
 
 export default function Home() {
-  const { control, handleSubmit } = useForm<CustomerType>({
+  const { control, handleSubmit } = useForm<CustomerType, any, CustomerType>({
     resolver: zodResolver(CustomerSchema),
     mode: 'onChange'
   });
