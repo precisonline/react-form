@@ -13,7 +13,7 @@ interface FloatLabelTextAreaProps {
 }
 
 export default function FloatLabelTextArea({ id, prompt, control } : FloatLabelTextAreaProps) : React.JSX.Element {
-    const { field, fieldState } = useController({ name: id, control, defaultValue: '' });
+    const { field, fieldState } = useController({ name: id, control });
 
     return(
         <div className="relative mb-4 mt-3">

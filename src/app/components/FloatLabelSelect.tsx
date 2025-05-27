@@ -14,7 +14,7 @@ interface FloatLabelSelectProps {
 }
 
 export default function FloatLabelSelect({ id, prompt, values, control } : FloatLabelSelectProps) : React.JSX.Element {
-    const { field, fieldState } = useController({ name: id, control, defaultValue: '' });
+    const { field, fieldState } = useController({ name: id, control });
 
     return(
         <div className="relative mb-4 mt-3">

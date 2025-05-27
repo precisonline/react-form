@@ -14,7 +14,7 @@ interface FloatLabelPasswordProps {
 }
 
 export default function FloatLabelPassword({id, prompt, defaultValue, control } : FloatLabelPasswordProps) : React.JSX.Element {
-    const { field, fieldState } = useController({ name: id, control, defaultValue: '' });
+    const { field, fieldState } = useController({ name: id, control });
     return(
         <div className="relative mb-4 mt-3">
             <input type="password" id={id} name={id} value={defaultValue} className="peer h-10 p-2 w-full rounded-md placeholder-transparent border border-gray-300 text-gray-800 outline-none focus:border-[3px] focus:border-blue-400 focus:ring-0" placeholder={prompt} />
