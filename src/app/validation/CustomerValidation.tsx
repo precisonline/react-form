@@ -68,7 +68,7 @@ export const CustomerSchemaV2 = z.object({
 
   /*
     This is nit picky about error messages but according to UX principles, it's better to focus on the solution rather than the problem, and less cognitive load to be direct about what formats are acceptable.
-    Please is also better than starting with 'invalid'.
+    'Please' is also better than starting with 'invalid'.
      */
   zip: z
     .string()

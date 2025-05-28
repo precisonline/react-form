@@ -1,10 +1,7 @@
-/*
-Moving this to it's own file so it is more reusable, easier to maintain and test, and can be imported into other components or files as needed.
-It also speeds up the page.tsx file, making it cleaner and more focused on the form logic rather than the data.
-*/
-
-export const states = {
-  '': '',
+// This object is useful for populating <select> options where you want
+// to display the full state name but use the abbreviation as the value.
+export const statesObject = {
+  '': 'Select a State...', // Placeholder for dropdowns
   AL: 'Alabama',
   AK: 'Alaska',
   AZ: 'Arizona',
@@ -13,6 +10,7 @@ export const states = {
   CO: 'Colorado',
   CT: 'Connecticut',
   DE: 'Delaware',
+  DC: 'District Of Columbia', // Added District of Columbia
   FL: 'Florida',
   GA: 'Georgia',
   HI: 'Hawaii',
@@ -56,3 +54,61 @@ export const states = {
   WI: 'Wisconsin',
   WY: 'Wyoming',
 }
+
+// This array of state abbreviations is ideal for use with Zod's `z.enum()`
+// for validating that a submitted value is one of these state codes.
+// The `as const` assertion makes it a tuple of string literals,
+// which is the most precise type for z.enum().
+export const statesArray = [
+  'AL',
+  'AK',
+  'AZ',
+  'AR',
+  'CA',
+  'CO',
+  'CT',
+  'DE',
+  'DC',
+  'FL',
+  'GA',
+  'HI',
+  'ID',
+  'IL',
+  'IN',
+  'IA',
+  'KS',
+  'KY',
+  'LA',
+  'ME',
+  'MD',
+  'MA',
+  'MI',
+  'MN',
+  'MS',
+  'MO',
+  'MT',
+  'NE',
+  'NV',
+  'NH',
+  'NJ',
+  'NM',
+  'NY',
+  'NC',
+  'ND',
+  'OH',
+  'OK',
+  'OR',
+  'PA',
+  'RI',
+  'SC',
+  'SD',
+  'TN',
+  'TX',
+  'UT',
+  'VT',
+  'VA',
+  'WA',
+  'WV',
+  'WI',
+  'WY',
+] as const
