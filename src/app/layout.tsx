@@ -1,34 +1,23 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// src/app/layout.tsx
+import type { Metadata } from 'next'
+// Adjust path if your ThemeRegistry folder is not directly under 'components'
+import ThemeRegistry from '@/components/ThemeRegistry/ThemeRegistry'
 
 export const metadata: Metadata = {
-  title: "Customer Entry",
-  description: "Customer Entry form",
-};
+  title: 'My MUI App with Corrected Setup',
+  description: 'Testing MUI SSR setup thoroughly',
+}
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: {
+  children: React.ReactNode
+}) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
+    <html lang='en'>
+      <body>
+        <ThemeRegistry>{children}</ThemeRegistry>
       </body>
     </html>
-  );
+  )
 }

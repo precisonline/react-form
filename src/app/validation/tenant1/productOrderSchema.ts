@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { statesArray } from '../../data/states'
+import { statesArray } from '@/app/data/states'
 
 export const tenant1ProductOrderSchema = z.object({
   // productId can remain generic as it likely refers to a universal product ID,
