@@ -11,7 +11,7 @@ import { zodResolver }    from '@hookform/resolvers/zod';
 import { states }         from './data/states';
 import { useSearchParams } from 'next/navigation';
 
-export default function Home() {
+export default function App() {
 
   const searchParams = useSearchParams(); /* for reading URLs */
   
