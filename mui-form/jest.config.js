@@ -3,36 +3,33 @@ module.exports = {
   testEnvironment: 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
 
-  // Test file patterns
   testMatch: [
-    '<rootDir>/src/**/__tests__/**/*.{js,ts}',
-    '<rootDir>/src/**/*.{test,spec}.{js,ts}',
+    '<rootDir>/src/**/__tests__/**/*.{js,ts,tsx}',
+    '<rootDir>/src/**/*.{test,spec}.{js,ts,tsx}',
   ],
 
-  // Transform TypeScript files
+  // Transform TypeScript files (updated syntax)
   transform: {
-    '^.+\\.tsx?$': 'ts-jest',
+    '^.+\\.(ts|tsx)$': [
+      'ts-jest',
+      {
+        tsconfig: {
+          jsx: 'react-jsx',
+        },
+      },
+    ],
   },
 
   // Module file extensions
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx'],
 
-  // Coverage
+  // Coverage - FIXED: now includes .tsx files
   collectCoverageFrom: [
-    'src/**/*.{js,ts}',
-    '!src/**/*.test.{js,ts}',
+    'src/**/*.{js,ts,tsx}',
+    '!src/**/*.test.{js,ts,tsx}',
     '!src/**/__tests__/**',
   ],
 
   // Ignore
   testPathIgnorePatterns: ['/node_modules/'],
-
-  // TypeScript configuration for ts-jest
-  globals: {
-    'ts-jest': {
-      tsconfig: {
-        jsx: 'react-jsx',
-      },
-    },
-  },
 }

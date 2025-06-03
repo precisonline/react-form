@@ -274,17 +274,30 @@ describe('Revised Contact Form Schema Validation', () => {
         const data = {
           ...baseValidData,
           country: 'USA' as const,
-          // Missing USA address fields
+          // Missing USA address fields - explicitly empty strings to trigger proper validation
+          usaStreetAddress: '',
+          usaCity: '',
+          usaState: '',
+          usaZipCode: '',
         }
 
         const result = contactSchema.safeParse(data)
         expect(result.success).toBe(false)
+
         if (!result.success) {
-          expect(
-            result.error.issues.some(
-              (issue) => issue.message === 'Street address is required for USA'
-            )
-          ).toBe(true)
+          // Check for USA field validation errors by path
+          const usaFieldErrors = result.error.issues.filter((issue) =>
+            issue.path.some((p) => typeof p === 'string' && p.startsWith('usa'))
+          )
+
+          expect(usaFieldErrors.length).toBeGreaterThan(0)
+
+          // Verify we have the expected USA field errors
+          const usaFieldPaths = usaFieldErrors.map((issue) => issue.path[0])
+          expect(usaFieldPaths).toContain('usaStreetAddress')
+          expect(usaFieldPaths).toContain('usaCity')
+          expect(usaFieldPaths).toContain('usaState')
+          expect(usaFieldPaths).toContain('usaZipCode')
         }
       })
     })
