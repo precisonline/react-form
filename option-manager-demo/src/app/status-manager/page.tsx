@@ -1,4 +1,3 @@
-// src/app/status-manager/page.tsx
 'use client'
 
 import React, { useState, useCallback } from 'react'
@@ -14,7 +13,12 @@ import {
 } from '@mui/material'
 import { ArrowBack, Add as AddIcon } from '@mui/icons-material'
 import Link from 'next/link'
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  DropResult,
+} from '@hello-pangea/dnd'
 import { ChromePicker } from 'react-color'
 
 // Import shared types
@@ -40,7 +44,6 @@ const StatusFlowManager: React.FC<StatusFlowManagerProps> = ({
 
   const sortedOptions = [...options].sort((a, b) => a.order - b.order)
 
-  // Extended color palette
   const colorOptions = [
     '#f44336',
     '#e91e63',
@@ -91,6 +94,16 @@ const StatusFlowManager: React.FC<StatusFlowManagerProps> = ({
     setEditForm({ name: '', color: '', showColorPicker: false })
   }, [])
 
+  // Click outside to cancel editing
+  const handleContainerClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (editingId && e.target === e.currentTarget) {
+        handleEditCancel()
+      }
+    },
+    [editingId, handleEditCancel]
+  )
+
   const handleDelete = useCallback(
     async (statusId: string) => {
       if (options.length <= 1) {
@@ -100,7 +113,6 @@ const StatusFlowManager: React.FC<StatusFlowManagerProps> = ({
 
       if (window.confirm('Are you sure you want to delete this status?')) {
         const updatedOptions = options.filter((opt) => opt.id !== statusId)
-        // Reorder the remaining options
         const reorderedOptions = updatedOptions.map((opt, index) => ({
           ...opt,
           order: index,
@@ -129,7 +141,7 @@ const StatusFlowManager: React.FC<StatusFlowManagerProps> = ({
   }, [newStatusForm, options, onSave])
 
   const handleDragEnd = useCallback(
-    (result: import('@hello-pangea/dnd').DropResult) => {
+    (result: DropResult) => {
       if (!result.destination) return
 
       const { source, destination } = result
@@ -166,6 +178,7 @@ const StatusFlowManager: React.FC<StatusFlowManagerProps> = ({
               <Box
                 {...provided.droppableProps}
                 ref={provided.innerRef}
+                onClick={handleContainerClick}
                 sx={{
                   pb: 2,
                   backgroundColor: snapshot.isDraggingOver
@@ -188,6 +201,7 @@ const StatusFlowManager: React.FC<StatusFlowManagerProps> = ({
                           <Box
                             ref={provided.innerRef}
                             {...provided.draggableProps}
+                            {...provided.dragHandleProps}
                             sx={{
                               display: 'flex',
                               flexDirection: 'column',
@@ -201,7 +215,7 @@ const StatusFlowManager: React.FC<StatusFlowManagerProps> = ({
                               color: 'white',
                               minWidth: 140,
                               position: 'relative',
-                              cursor: 'pointer',
+                              cursor: snapshot.isDragging ? 'grabbing' : 'grab',
                               transition: 'all 0.3s ease',
                               opacity: snapshot.isDragging ? 0.8 : 1,
                               transform: snapshot.isDragging
@@ -226,37 +240,6 @@ const StatusFlowManager: React.FC<StatusFlowManagerProps> = ({
                               handleDelete(status.id)
                             }}
                           >
-                            {/* Drag Handle */}
-                            <Box
-                              {...provided.dragHandleProps}
-                              sx={{
-                                position: 'absolute',
-                                top: 4,
-                                left: 4,
-                                width: 24,
-                                height: 16,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                cursor: 'grab',
-                                borderRadius: 1,
-                                backgroundColor: 'rgba(0,0,0,0.2)',
-                                opacity: 0.7,
-                                fontSize: '10px',
-                                lineHeight: 1,
-                                '&:hover': {
-                                  opacity: 1,
-                                  backgroundColor: 'rgba(0,0,0,0.4)',
-                                },
-                                '&:active': {
-                                  cursor: 'grabbing',
-                                },
-                              }}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              ⋮⋮
-                            </Box>
-
                             {editingId === status.id ? (
                               <Box sx={{ width: '100%' }}>
                                 <TextField
@@ -282,7 +265,6 @@ const StatusFlowManager: React.FC<StatusFlowManagerProps> = ({
                                   }}
                                 />
 
-                                {/* Color Selection */}
                                 <Box sx={{ mb: 1 }}>
                                   <Box
                                     display='flex'
@@ -316,7 +298,6 @@ const StatusFlowManager: React.FC<StatusFlowManagerProps> = ({
                                     ))}
                                   </Box>
 
-                                  {/* White background only for custom color section and below */}
                                   <Box
                                     sx={{
                                       backgroundColor: 'white',
@@ -440,7 +421,6 @@ const StatusFlowManager: React.FC<StatusFlowManagerProps> = ({
                                 >
                                   {status.name}
                                 </Typography>
-                                {/* Delete button on hover */}
                                 <Box
                                   onClick={(e) => {
                                     e.stopPropagation()
@@ -490,7 +470,6 @@ const StatusFlowManager: React.FC<StatusFlowManagerProps> = ({
                   ))}
                   {provided.placeholder}
 
-                  {/* Add New Status Inline */}
                   {isAdding && (
                     <>
                       {sortedOptions.length > 0 && (
@@ -526,6 +505,7 @@ const StatusFlowManager: React.FC<StatusFlowManagerProps> = ({
                           }
                           placeholder='Status name'
                           size='small'
+                          fullWidth
                           sx={{
                             mb: 1,
                             '& .MuiInputBase-root': {
@@ -539,8 +519,7 @@ const StatusFlowManager: React.FC<StatusFlowManagerProps> = ({
                           }}
                         />
 
-                        {/* Color Selection for New Status */}
-                        <Box sx={{ mb: 1 }}>
+                        <Box sx={{ mb: 1, width: '100%' }}>
                           <Box display='flex' flexWrap='wrap' gap={0.5} mb={1}>
                             {colorOptions.map((color) => (
                               <Box
@@ -567,64 +546,83 @@ const StatusFlowManager: React.FC<StatusFlowManagerProps> = ({
                               />
                             ))}
                           </Box>
-                          <Button
-                            size='small'
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setNewStatusForm((prev) => ({
-                                ...prev,
-                                showColorPicker: !prev.showColorPicker,
-                              }))
+
+                          <Box
+                            sx={{
+                              backgroundColor: 'white',
+                              borderRadius: 1,
+                              p: 1,
+                              color: 'black',
                             }}
-                            sx={{ color: 'white', fontSize: '0.7rem', p: 0.5 }}
                           >
-                            🎨 Custom Color
-                          </Button>
-                          {newStatusForm.showColorPicker && (
-                            <Box
-                              onClick={(e) => e.stopPropagation()}
+                            <Button
+                              size='small'
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setNewStatusForm((prev) => ({
+                                  ...prev,
+                                  showColorPicker: !prev.showColorPicker,
+                                }))
+                              }}
                               sx={{
-                                mt: 1,
-                                position: 'absolute',
-                                zIndex: 1000,
-                                top: '100%',
-                                left: 0,
+                                color: 'black',
+                                fontSize: '0.7rem',
+                                p: 0.5,
+                                mb: 1,
                               }}
                             >
-                              <ChromePicker
-                                color={newStatusForm.color}
-                                onChange={(color) =>
-                                  setNewStatusForm((prev) => ({
-                                    ...prev,
-                                    color: color.hex,
-                                  }))
-                                }
-                              />
-                            </Box>
-                          )}
-                        </Box>
+                              ⚙️ Custom Color
+                            </Button>
+                            {newStatusForm.showColorPicker && (
+                              <Box
+                                onClick={(e) => e.stopPropagation()}
+                                sx={{ mb: 1 }}
+                              >
+                                <ChromePicker
+                                  color={newStatusForm.color}
+                                  onChange={(color) =>
+                                    setNewStatusForm((prev) => ({
+                                      ...prev,
+                                      color: color.hex,
+                                    }))
+                                  }
+                                />
+                              </Box>
+                            )}
 
-                        <Box display='flex' gap={0.5}>
-                          <Button
-                            size='small'
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleAddStatus()
-                            }}
-                            sx={{ color: 'white', minWidth: 'auto', p: 0.5 }}
-                          >
-                            ✓
-                          </Button>
-                          <Button
-                            size='small'
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setIsAdding(false)
-                            }}
-                            sx={{ color: 'white', minWidth: 'auto', p: 0.5 }}
-                          >
-                            ✕
-                          </Button>
+                            <Box display='flex' gap={0.5}>
+                              <Button
+                                size='small'
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleAddStatus()
+                                }}
+                                sx={{
+                                  color: 'green',
+                                  minWidth: 'auto',
+                                  p: 0.5,
+                                  fontWeight: 'bold',
+                                }}
+                              >
+                                ✓
+                              </Button>
+                              <Button
+                                size='small'
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setIsAdding(false)
+                                }}
+                                sx={{
+                                  color: 'red',
+                                  minWidth: 'auto',
+                                  p: 0.5,
+                                  fontWeight: 'bold',
+                                }}
+                              >
+                                ✕
+                              </Button>
+                            </Box>
+                          </Box>
                         </Box>
                       </Box>
                     </>
@@ -676,7 +674,6 @@ export default function StatusManagerPage() {
   ])
 
   const handleSave = useCallback(async (updatedStatuses: Option[]) => {
-    // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 500))
     setStatuses(updatedStatuses)
   }, [])
@@ -687,7 +684,6 @@ export default function StatusManagerPage() {
       const [removed] = reorderedStatuses.splice(startIndex, 1)
       reorderedStatuses.splice(endIndex, 0, removed)
 
-      // Update order values
       const updatedStatuses = reorderedStatuses.map((status, index) => ({
         ...status,
         order: index,
@@ -717,6 +713,7 @@ export default function StatusManagerPage() {
           delete • Click + to add new status
         </Typography>
       </Box>
+
       <StatusFlowManager
         options={statuses}
         onSave={handleSave}
