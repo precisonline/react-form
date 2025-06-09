@@ -5,7 +5,10 @@ import { useState, useCallback } from 'react'
 import { Container, Typography, Box, Button } from '@mui/material'
 import { ArrowBack } from '@mui/icons-material'
 import Link from 'next/link'
-import { OptionsManager, type Option } from '../components/OptionsManager'
+import {
+  OptionsManager,
+  type Option,
+} from '../../components/shared/OptionsManager'
 
 export default function ClassificationManagerPage() {
   const [classifications, setClassifications] = useState<Option[]>([

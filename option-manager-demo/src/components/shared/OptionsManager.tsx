@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 'use client'
 
 import React, { useState, useCallback } from 'react'
@@ -47,7 +46,7 @@ import {
   OptionFormData,
   OptionFormSchema,
   OptionsManagerProps,
-} from '../types/options'
+} from '../../app/types/options'
 
 export const OptionsManager: React.FC<OptionsManagerProps> = ({
   title,
@@ -149,7 +148,9 @@ export const OptionsManager: React.FC<OptionsManagerProps> = ({
       } catch (error) {
         setSnackbar({
           open: true,
-          message: `Failed to ${editingOption ? 'update' : 'create'} ${type}`,
+          message: `Failed to ${editingOption ? 'update' : 'create'} ${type}: ${
+            error instanceof Error ? error.message : 'Unknown error'
+          }`,
           severity: 'error',
         })
       } finally {
@@ -176,7 +177,9 @@ export const OptionsManager: React.FC<OptionsManagerProps> = ({
       } catch (error) {
         setSnackbar({
           open: true,
-          message: `Failed to delete ${type}`,
+          message: `Failed to delete ${type}: ${
+            error instanceof Error ? error.message : 'Unknown error'
+          }`,
           severity: 'error',
         })
       } finally {
@@ -209,7 +212,9 @@ export const OptionsManager: React.FC<OptionsManagerProps> = ({
       } catch (error) {
         setSnackbar({
           open: true,
-          message: `Failed to update ${type} status`,
+          message: `Failed to update ${type} status: ${
+            error instanceof Error ? error.message : 'Unknown error'
+          }`,
           severity: 'error',
         })
       } finally {
@@ -346,7 +351,7 @@ export const OptionsManager: React.FC<OptionsManagerProps> = ({
         </CardContent>
       </Card>
 
-      {/* Dialog for editing */}
+      {/* Edit Dialog for Priority/Classification */}
       <Dialog
         open={dialogOpen}
         onClose={handleCloseDialog}

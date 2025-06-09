@@ -11,25 +11,24 @@ import Grid from '@mui/material/Grid'
 import {
   Assignment as StatusIcon,
   PriorityHigh as PriorityIcon,
-  Category as ClassificationIcon,
 } from '@mui/icons-material'
 
 export default function Home() {
   const demoPages = [
     {
       title: 'Status Manager',
-      description: 'Manage task statuses with drag-and-drop reordering',
+      description: 'Manage task statuses',
       href: '/status-manager',
       icon: <StatusIcon sx={{ fontSize: 48 }} />,
       color: '#4caf50',
     },
-    // {
-    //   title: 'Priority Manager',
-    //   description: 'Configure priority levels for tasks',
-    //   href: '/priority-manager',
-    //   icon: <PriorityIcon sx={{ fontSize: 48 }} />,
-    //   color: '#ff9800',
-    // },
+    {
+      title: 'Priority Manager',
+      description: 'Configure priority levels for tasks',
+      href: '/priority-manager',
+      icon: <PriorityIcon sx={{ fontSize: 48 }} />,
+      color: '#ff9800',
+    },
     // {
     //   title: 'Classification Manager',
     //   description: 'Set up task classifications and categories',

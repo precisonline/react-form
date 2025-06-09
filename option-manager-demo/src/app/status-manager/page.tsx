@@ -235,10 +235,6 @@ const StatusFlowManager: React.FC<StatusFlowManagerProps> = ({
                                 handleEditStart(status)
                               }
                             }}
-                            onContextMenu={(e) => {
-                              e.preventDefault()
-                              handleDelete(status.id)
-                            }}
                           >
                             {editingId === status.id ? (
                               <Box sx={{ width: '100%' }}>
@@ -709,8 +705,8 @@ export default function StatusManagerPage() {
           Status Manager
         </Typography>
         <Typography variant='body1' color='textSecondary' paragraph>
-          Drag status cards to reorder • Click status to edit • Right-click to
-          delete • Click + to add new status
+          Drag status cards to reorder • Click status to edit • Click + to add
+          new status
         </Typography>
       </Box>
 
