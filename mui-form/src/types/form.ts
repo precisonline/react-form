@@ -1,12 +1,11 @@
-import { ContactFormData, Country } from '../schemas/contactSchema'
+import { AddressFormData } from '../schemas/userProfileSchema'
 
-export type { ContactFormData, Country }
+export interface AddressFormDialogProps {
+  open: boolean
 
-export interface FormFieldProps {
-  name: string
-  label: string
-  required?: boolean
-  type?: string
-  multiline?: boolean
-  rows?: number
+  onClose: () => void
+
+  onSave: (data: AddressFormData) => void
+
+  initialData?: AddressFormData | null
 }

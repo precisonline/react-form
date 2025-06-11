@@ -1,9 +1,9 @@
-import ContactForm from '../components/ContactForm'
+import UserProfileForm from '@/components/UserProfileForm'
 
 export default function Home() {
   return (
     <main>
-      <ContactForm />
+      <UserProfileForm />
     </main>
   )
 }
