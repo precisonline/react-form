@@ -1,7 +1,6 @@
 'use client'
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useCallback, useMemo } from 'react'
 import {
   Box,
   Card,
@@ -9,371 +8,563 @@ import {
   Typography,
   Button,
   IconButton,
-  Chip,
-  LinearProgress,
   Paper,
   Avatar,
+  Grid,
 } from '@mui/material'
-import { styled } from '@mui/material/styles'
-import { X, Sparkles, BarChart3, Users, DollarSign, Target } from 'lucide-react'
+import {
+  X,
+  BarChart3,
+  Settings,
+  Calendar,
+  Maximize2,
+  Minimize2,
+} from 'lucide-react'
 
-const GlassBackdrop = styled('div')({
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  background: `linear-gradient(135deg, 
-    rgba(0, 0, 0, 0.8) 0%, 
-    rgba(15, 23, 42, 0.85) 15%,
-    rgba(30, 41, 59, 0.8) 30%,
-    rgba(51, 65, 85, 0.75) 45%,
-    rgba(30, 41, 59, 0.8) 60%,
-    rgba(15, 23, 42, 0.85) 75%,
-    rgba(0, 0, 0, 0.8) 90%,
-    rgba(15, 23, 42, 0.85) 100%)`,
-  backdropFilter: 'blur(20px)',
-  zIndex: 1300,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: '16px',
-})
+interface WindowState {
+  id: string
+  type: 'analytics' | 'settings' | 'calendar'
+  x: number
+  y: number
+  width: number
+  height: number
+  isMaximized: boolean
+  zIndex: number
+}
 
-const GlassModal = styled(Paper, {
-  shouldForwardProp: (prop) => prop !== 'expanded',
-})<{ expanded?: boolean }>(({ expanded }) => ({
-  backgroundColor: 'rgba(255, 255, 255, 0.7)',
-  backdropFilter: 'blur(24px)',
-  borderRadius: '16px',
-  border: '1px solid rgba(255, 255, 255, 0.3)',
-  boxShadow: `
-    0 25px 50px rgba(0, 0, 0, 0.15),
-    0 0 0 1px rgba(255, 255, 255, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3)
-  `,
-  outline: 'none',
-  transformOrigin: 'center center',
+// Window configurations
+const WINDOW_CONFIGS = {
+  analytics: {
+    title: 'Analytics Dashboard',
+    subtitle: 'Real-time insights',
+    icon: BarChart3,
+    gradient: 'linear-gradient(135deg, #3B82F6, #6366F1)',
+    defaultSize: { width: 500, height: 400 },
+  },
+  settings: {
+    title: 'Settings Panel',
+    subtitle: 'Configuration',
+    icon: Settings,
+    gradient: 'linear-gradient(135deg, #1D4ED8, #4F46E5)',
+    defaultSize: { width: 450, height: 380 },
+  },
+  calendar: {
+    title: 'Calendar View',
+    subtitle: 'Schedule & events',
+    icon: Calendar,
+    gradient: 'linear-gradient(135deg, #60A5FA, #818CF8)',
+    defaultSize: { width: 480, height: 420 },
+  },
+} as const
 
-  transition: 'all 0.2s ease-out',
-  transform: expanded ? 'scale(1)' : 'scale(0.95)', // Example usage
-  opacity: expanded ? 1 : 0, // Example usage
-}))
+const MultiWindowInterface = () => {
+  const [windows, setWindows] = useState<WindowState[]>([])
+  const [interaction, setInteraction] = useState<{
+    type: 'drag' | 'resize' | null
+    windowId: string | null
+    startX: number
+    startY: number
+    startWidth?: number
+    startHeight?: number
+    direction?: string
+  }>({ type: null, windowId: null, startX: 0, startY: 0 })
 
-const CleanMorphingModal = () => {
-  const [activeModal, setActiveModal] = useState<string | null>(null)
+  // Memoized active window calculation
+  const activeWindowId = useMemo(
+    () =>
+      windows.reduce((max, w) => (w.zIndex > max.zIndex ? w : max), windows[0])
+        ?.id,
+    [windows]
+  )
 
-  const MorphingModal = () => {
-    const [isExpanded, setIsExpanded] = useState(false)
+  // Optimized window operations
+  const openWindow = useCallback((type: keyof typeof WINDOW_CONFIGS) => {
+    setWindows((prev) => {
+      const existing = prev.find((w) => w.type === type)
+      if (existing) {
+        // Bring to front
+        const maxZ = Math.max(...prev.map((w) => w.zIndex))
+        return prev.map((w) =>
+          w.id === existing.id ? { ...w, zIndex: maxZ + 1 } : w
+        )
+      }
 
-    useEffect(() => {
-      setIsExpanded(true)
-    }, [])
+      const config = WINDOW_CONFIGS[type]
+      const newWindow: WindowState = {
+        id: `${type}-${Date.now()}`,
+        type,
+        x: 100 + prev.length * 40,
+        y: 100 + prev.length * 40,
+        ...config.defaultSize,
+        isMaximized: false,
+        zIndex: Math.max(...prev.map((w) => w.zIndex), 1000) + 1,
+      }
+      return [...prev, newWindow]
+    })
+  }, [])
 
-    const handleClose = () => {
-      setIsExpanded(false)
+  const closeWindow = useCallback((id: string) => {
+    setWindows((prev) => prev.filter((w) => w.id !== id))
+  }, [])
 
-      setTimeout(() => setActiveModal(null), 200)
-    }
-
-    const metrics = [
-      {
-        label: 'Revenue',
-        value: '$847K',
-        change: '+12%',
-        positive: true,
-        icon: DollarSign,
-        color: 'success' as const,
-        progress: 75,
-      },
-      {
-        label: 'Users',
-        value: '23,451',
-        change: '+8%',
-        positive: true,
-        icon: Users,
-        color: 'primary' as const,
-        progress: 82,
-      },
-      {
-        label: 'Conversion',
-        value: '3.2%',
-        change: '-2%',
-        positive: false,
-        icon: Target,
-        color: 'error' as const,
-        progress: 65,
-      },
-    ]
-
-    return (
-      <GlassBackdrop>
-        <GlassModal expanded={isExpanded}>
-          {isExpanded && (
-            <Box
-              sx={{
-                p: 3,
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-              }}
-            >
-              {/* Header */}
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  mb: 3,
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Avatar
-                    sx={{
-                      width: 48,
-                      height: 48,
-                      background:
-                        'linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%)',
-                      borderRadius: '12px',
-                    }}
-                  >
-                    <Sparkles size={24} color='white' />
-                  </Avatar>
-                  <Box>
-                    <Typography
-                      variant='h5'
-                      component='h2'
-                      fontWeight='bold'
-                      color='text.primary'
-                    >
-                      Analytics Dashboard
-                    </Typography>
-                    <Typography variant='body2' color='text.secondary'>
-                      Real-time business insights
-                    </Typography>
-                  </Box>
-                </Box>
-                <IconButton
-                  onClick={handleClose}
-                  sx={{
-                    backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                    '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.08)' },
-                  }}
-                >
-                  <X size={20} />
-                </IconButton>
-              </Box>
-
-              {/* Content in 3 columns*/}
-              <Box
-                sx={{
-                  flex: 1,
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(3, 1fr)',
-                  gap: 3,
-                }}
-              >
-                {metrics.map((metric, i) => (
-                  <Card
-                    key={i}
-                    sx={{
-                      backgroundColor: 'rgba(255, 255, 255, 0.5)',
-                      backdropFilter: 'blur(16px)',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      borderRadius: '12px',
-                      '&:hover': {
-                        backgroundColor: 'rgba(255, 255, 255, 0.6)',
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 8px 25px rgba(0, 0, 0, 0.15)',
-                      },
-                    }}
-                  >
-                    <CardContent sx={{ p: 3 }}>
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 2,
-                          mb: 2,
-                        }}
-                      >
-                        <Typography
-                          variant='body2'
-                          fontWeight='medium'
-                          color='text.secondary'
-                        >
-                          {metric.label}
-                        </Typography>
-                      </Box>
-
-                      <Typography
-                        variant='h4'
-                        component='div'
-                        fontWeight='bold'
-                        color='text.primary'
-                        sx={{ mb: 1 }}
-                      >
-                        {metric.value}
-                      </Typography>
-
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          mb: 2,
-                        }}
-                      >
-                        <Typography
-                          variant='body2'
-                          color={
-                            metric.positive ? 'success.main' : 'error.main'
-                          }
-                          fontWeight='medium'
-                        >
-                          {metric.change}
-                        </Typography>
-                        <Chip
-                          label={metric.positive ? 'Growth' : 'Decline'}
-                          color={metric.positive ? 'success' : 'error'}
-                          size='small'
-                          variant='outlined'
-                          sx={{
-                            backgroundColor: metric.positive
-                              ? 'rgba(22, 163, 74, 0.1)'
-                              : 'rgba(239, 68, 68, 0.1)',
-                            fontWeight: 'medium',
-                            fontSize: '0.75rem',
-                          }}
-                        />
-                      </Box>
-
-                      <LinearProgress
-                        variant='determinate'
-                        value={metric.progress}
-                        color={metric.color}
-                        sx={{
-                          height: 6,
-                          borderRadius: 3,
-                          backgroundColor: 'rgba(0, 0, 0, 0.1)',
-                          '& .MuiLinearProgress-bar': {
-                            borderRadius: 3,
-                          },
-                        }}
-                      />
-                    </CardContent>
-                  </Card>
-                ))}
-              </Box>
-
-              <Box
-                sx={{
-                  display: 'flex',
-                  justifyContent: 'flex-end',
-                  gap: 2,
-                  mt: 3,
-                }}
-              >
-                <Button
-                  variant='text'
-                  color='primary'
-                  sx={{
-                    textTransform: 'none',
-                    fontWeight: 'medium',
-                    color: 'text.secondary',
-                    '&:hover': { color: 'text.primary' },
-                  }}
-                >
-                  View Details
-                </Button>
-                <Button
-                  variant='contained'
-                  startIcon={<BarChart3 size={16} />}
-                  sx={{
-                    textTransform: 'none',
-                    fontWeight: 'medium',
-                    background:
-                      'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
-                    borderRadius: '8px',
-                    '&:hover': {
-                      background:
-                        'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)',
-                    },
-                  }}
-                >
-                  Export Report
-                </Button>
-              </Box>
-            </Box>
-          )}
-        </GlassModal>
-      </GlassBackdrop>
+  const toggleMaximize = useCallback((id: string) => {
+    setWindows((prev) =>
+      prev.map((w) =>
+        w.id === id
+          ? {
+              ...w,
+              isMaximized: !w.isMaximized,
+              x: w.isMaximized ? 100 : 0,
+              y: w.isMaximized ? 100 : 0,
+            }
+          : w
+      )
     )
-  }
+  }, [])
+
+  // Unified mouse handlers
+  const handleMouseDown = useCallback(
+    (
+      e: React.MouseEvent,
+      windowId: string,
+      type: 'drag' | 'resize',
+      direction?: string
+    ) => {
+      e.preventDefault()
+      const window = windows.find((w) => w.id === windowId)
+      if (!window || window.isMaximized) return
+
+      let offsetX = 0,
+        offsetY = 0
+      if (type === 'drag') {
+        offsetX = e.clientX - window.x
+        offsetY = e.clientY - window.y
+      }
+
+      setInteraction({
+        type,
+        windowId,
+        startX: type === 'drag' ? offsetX : e.clientX,
+        startY: type === 'drag' ? offsetY : e.clientY,
+        startWidth: window.width,
+        startHeight: window.height,
+        direction,
+      })
+
+      // Bring to front
+      const maxZ = Math.max(...windows.map((w) => w.zIndex))
+      setWindows((prev) =>
+        prev.map((w) => (w.id === windowId ? { ...w, zIndex: maxZ + 1 } : w))
+      )
+    },
+    [windows]
+  )
+
+  const handleMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (!interaction.type || !interaction.windowId) return
+
+      setWindows((prev) =>
+        prev.map((w) => {
+          if (w.id !== interaction.windowId) return w
+
+          if (interaction.type === 'drag') {
+            const newX = e.clientX - interaction.startX
+            const newY = e.clientY - interaction.startY
+
+            return {
+              ...w,
+              x: Math.max(0, Math.min(window.innerWidth - w.width, newX)),
+              y: Math.max(0, Math.min(window.innerHeight - w.height, newY)),
+            }
+          }
+
+          if (interaction.type === 'resize') {
+            const deltaX = e.clientX - interaction.startX
+            const deltaY = e.clientY - interaction.startY
+
+            let newWidth = w.width
+            let newHeight = w.height
+
+            if (interaction.direction?.includes('e')) {
+              newWidth = Math.max(300, interaction.startWidth! + deltaX)
+            }
+            if (interaction.direction?.includes('s')) {
+              newHeight = Math.max(200, interaction.startHeight! + deltaY)
+            }
+
+            return { ...w, width: newWidth, height: newHeight }
+          }
+
+          return w
+        })
+      )
+    },
+    [interaction]
+  )
+
+  const handleMouseUp = useCallback(() => {
+    setInteraction({ type: null, windowId: null, startX: 0, startY: 0 })
+  }, [])
+
+  // Event listeners
+  React.useEffect(() => {
+    if (interaction.type) {
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+      document.body.style.userSelect = 'none'
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove)
+        document.removeEventListener('mouseup', handleMouseUp)
+        document.body.style.userSelect = 'auto'
+      }
+    }
+  }, [interaction.type, handleMouseMove, handleMouseUp])
+
+  // Simplified window content
+  const renderContent = useCallback((window: WindowState) => {
+    switch (window.type) {
+      case 'analytics':
+        return (
+          <Box sx={{ p: 3, height: '100%', overflow: 'auto' }}>
+            <Grid container spacing={2}>
+              {[
+                { label: 'Revenue', value: '$847K', change: '+12%' },
+                { label: 'Users', value: '23,451', change: '+8%' },
+              ].map((metric, i) => (
+                <Grid item xs={6} key={i}>
+                  <Paper
+                    sx={{
+                      p: 2,
+                      bgcolor: 'rgba(255,255,255,0.8)',
+                      border: '1px solid rgba(59,130,246,0.2)',
+                      '&:hover': { bgcolor: 'rgba(255,255,255,0.9)' },
+                    }}
+                  >
+                    <Typography variant='caption' color='text.secondary'>
+                      {metric.label}
+                    </Typography>
+                    <Typography variant='h6' fontWeight='bold'>
+                      {metric.value}
+                    </Typography>
+                    <Typography variant='caption' color='success.main'>
+                      {metric.change}
+                    </Typography>
+                  </Paper>
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
+        )
+      case 'settings':
+        return (
+          <Box sx={{ p: 3 }}>
+            {['Notifications', 'Privacy', 'Display', 'Account'].map(
+              (item, i) => (
+                <Paper
+                  key={i}
+                  sx={{
+                    p: 2,
+                    mb: 1,
+                    cursor: 'pointer',
+                    bgcolor: 'rgba(255,255,255,0.7)',
+                    '&:hover': {
+                      bgcolor: 'rgba(255,255,255,0.9)',
+                      transform: 'translateX(4px)',
+                    },
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <Typography variant='body2'>{item}</Typography>
+                </Paper>
+              )
+            )}
+          </Box>
+        )
+      case 'calendar':
+        return (
+          <Box sx={{ p: 3 }}>
+            {[
+              { time: '9:00 AM', event: 'Team Meeting' },
+              { time: '11:30 AM', event: 'Project Review' },
+              { time: '2:00 PM', event: 'Client Call' },
+            ].map((item, i) => (
+              <Paper
+                key={i}
+                sx={{
+                  p: 2,
+                  mb: 1,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  bgcolor: 'rgba(255,255,255,0.7)',
+                  '&:hover': { bgcolor: 'rgba(255,255,255,0.9)' },
+                }}
+              >
+                <Typography variant='body2' fontWeight='medium'>
+                  {item.event}
+                </Typography>
+                <Typography variant='caption' color='text.secondary'>
+                  {item.time}
+                </Typography>
+              </Paper>
+            ))}
+          </Box>
+        )
+      default:
+        return null
+    }
+  }, [])
 
   return (
     <Box
       sx={{
         minHeight: '100vh',
         background:
-          'linear-gradient(135deg, #F1F5F9 0%, #DBEAFE 50%, #E0E7FF 100%)',
-        p: 4,
+          'linear-gradient(135deg, #F8FAFC 0%, #DBEAFE 50%, #F8FAFC 100%)',
+        position: 'relative',
       }}
     >
-      <Box sx={{ maxWidth: '1200px', mx: 'auto' }}>
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'center',
-          }}
-        >
-          <Card
-            sx={{
-              backgroundColor: 'rgba(255, 255, 255, 0.8)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255, 255, 255, 0.5)',
-              borderRadius: '16px',
-              transition: 'all 0.3s ease',
-              '&:hover': {
-                transform: 'translateY(-4px)',
-                boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
-              },
-            }}
-          >
-            <CardContent sx={{ p: 4 }}>
-              <Button
-                variant='contained'
-                fullWidth
-                startIcon={<Sparkles size={20} />}
-                onClick={() => setActiveModal('fast')}
-                sx={{
-                  py: 2,
-                  textTransform: 'none',
-                  fontWeight: 'semibold',
-                  fontSize: '1.1rem',
-                  background:
-                    'linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%)',
-                  borderRadius: '12px',
-                  boxShadow: '0 8px 25px rgba(59, 130, 246, 0.3)',
-                  '&:hover': {
-                    background:
-                      'linear-gradient(135deg, #2563EB 0%, #7C3AED 100%)',
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 12px 30px rgba(59, 130, 246, 0.4)',
-                  },
-                }}
-              >
-                Launch Modal
-              </Button>
-            </CardContent>
-          </Card>
+      {/* Main UI */}
+      <Box sx={{ p: 4, position: 'relative', zIndex: 1 }}>
+        <Box sx={{ maxWidth: 1200, mx: 'auto', textAlign: 'center', mb: 6 }}>
+          <Typography variant='h3' fontWeight='bold' mb={2}>
+            Multi-Window Interface
+          </Typography>
+          <Typography variant='body1' color='text.secondary' mb={4}>
+            Launch multiple draggable windows
+          </Typography>
+
+          <Grid container spacing={3} justifyContent='center'>
+            {Object.entries(WINDOW_CONFIGS).map(([type, config]) => (
+              <Grid item xs={12} md={4} key={type}>
+                <Card
+                  onClick={() =>
+                    openWindow(type as keyof typeof WINDOW_CONFIGS)
+                  }
+                  sx={{
+                    cursor: 'pointer',
+                    bgcolor: 'rgba(255,255,255,0.9)',
+                    backdropFilter: 'blur(20px)',
+                    border: '1px solid rgba(59,130,246,0.2)',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      transform: 'translateY(-8px)',
+                      boxShadow: '0 20px 40px rgba(59,130,246,0.15)',
+                      borderColor: 'rgba(59,130,246,0.4)',
+                    },
+                  }}
+                >
+                  <CardContent sx={{ p: 4, textAlign: 'center' }}>
+                    <Avatar
+                      sx={{
+                        width: 64,
+                        height: 64,
+                        mb: 3,
+                        mx: 'auto',
+                        background: config.gradient,
+                        borderRadius: 2,
+                      }}
+                    >
+                      <config.icon size={32} color='white' />
+                    </Avatar>
+                    <Typography variant='h6' fontWeight='bold' mb={1}>
+                      {config.title}
+                    </Typography>
+                    <Typography variant='body2' color='text.secondary' mb={3}>
+                      {config.subtitle}
+                    </Typography>
+                    <Button
+                      variant='contained'
+                      fullWidth
+                      startIcon={<config.icon size={20} />}
+                      sx={{
+                        background: config.gradient,
+                        textTransform: 'none',
+                        borderRadius: 2,
+                        '&:hover': { transform: 'translateY(-2px)' },
+                      }}
+                    >
+                      Open Window
+                    </Button>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
         </Box>
       </Box>
 
-      {/* Render Modal */}
-      {activeModal === 'fast' && <MorphingModal />}
+      {/* Windows */}
+      {windows.map((window) => {
+        const config = WINDOW_CONFIGS[window.type]
+        const isActive = window.id === activeWindowId
+
+        return (
+          <Paper
+            key={window.id}
+            sx={{
+              position: 'fixed',
+              left: window.x,
+              top: window.y,
+              width: window.isMaximized ? '100vw' : window.width,
+              height: window.isMaximized ? '100vh' : window.height,
+              zIndex: window.zIndex,
+              bgcolor: 'rgba(255,255,255,0.95)',
+              backdropFilter: 'blur(24px)',
+              borderRadius: window.isMaximized ? 0 : 2,
+              border: isActive
+                ? '2px solid rgba(59,130,246,0.6)'
+                : '1px solid rgba(59,130,246,0.2)',
+              boxShadow: isActive
+                ? '0 25px 50px rgba(59,130,246,0.25)'
+                : '0 15px 35px rgba(59,130,246,0.15)',
+              transition: window.isMaximized
+                ? 'all 0.3s ease'
+                : 'border 0.2s ease, box-shadow 0.2s ease',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Header */}
+            <Box
+              onMouseDown={(e) => handleMouseDown(e, window.id, 'drag')}
+              sx={{
+                p: 2,
+                borderBottom: '1px solid rgba(0,0,0,0.08)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                cursor:
+                  interaction.windowId === window.id ? 'grabbing' : 'move',
+                userSelect: 'none',
+                '&:hover': { bgcolor: 'rgba(0,0,0,0.02)' },
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Avatar
+                  sx={{ width: 32, height: 32, background: config.gradient }}
+                >
+                  <config.icon size={16} color='white' />
+                </Avatar>
+                <Box>
+                  <Typography variant='subtitle2' fontWeight='bold'>
+                    {config.title}
+                  </Typography>
+                  <Typography variant='caption' color='text.secondary'>
+                    {config.subtitle}
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <IconButton
+                  size='small'
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    toggleMaximize(window.id)
+                  }}
+                  sx={{
+                    width: 28,
+                    height: 28,
+                    '&:hover': {
+                      bgcolor: 'rgba(59,130,246,0.1)',
+                      transform: 'scale(1.05)',
+                    },
+                  }}
+                >
+                  {window.isMaximized ? (
+                    <Minimize2 size={16} />
+                  ) : (
+                    <Maximize2 size={16} />
+                  )}
+                </IconButton>
+                <IconButton
+                  size='small'
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    closeWindow(window.id)
+                  }}
+                  sx={{
+                    width: 28,
+                    height: 28,
+                    '&:hover': {
+                      bgcolor: 'rgba(239,68,68,0.1)',
+                      color: 'error.main',
+                      transform: 'scale(1.05)',
+                    },
+                  }}
+                >
+                  <X size={16} />
+                </IconButton>
+              </Box>
+            </Box>
+
+            {/* Content */}
+            <Box sx={{ height: 'calc(100% - 73px)', overflow: 'hidden' }}>
+              {renderContent(window)}
+            </Box>
+
+            {/* Resize handles */}
+            {!window.isMaximized && (
+              <>
+                <Box
+                  onMouseDown={(e) =>
+                    handleMouseDown(e, window.id, 'resize', 'e')
+                  }
+                  sx={{
+                    position: 'absolute',
+                    top: 12,
+                    bottom: 12,
+                    right: 0,
+                    width: 8,
+                    cursor: 'e-resize',
+                    '&:hover': { bgcolor: 'rgba(59,130,246,0.1)' },
+                  }}
+                />
+                <Box
+                  onMouseDown={(e) =>
+                    handleMouseDown(e, window.id, 'resize', 's')
+                  }
+                  sx={{
+                    position: 'absolute',
+                    left: 12,
+                    right: 12,
+                    bottom: 0,
+                    height: 8,
+                    cursor: 's-resize',
+                    '&:hover': { bgcolor: 'rgba(59,130,246,0.1)' },
+                  }}
+                />
+                <Box
+                  onMouseDown={(e) =>
+                    handleMouseDown(e, window.id, 'resize', 'se')
+                  }
+                  sx={{
+                    position: 'absolute',
+                    bottom: 0,
+                    right: 0,
+                    width: 12,
+                    height: 12,
+                    cursor: 'se-resize',
+                    '&:hover': { bgcolor: 'rgba(59,130,246,0.1)' },
+                    '&::after': {
+                      content: '""',
+                      position: 'absolute',
+                      bottom: 2,
+                      right: 2,
+                      width: 8,
+                      height: 8,
+                      background:
+                        'linear-gradient(-45deg, transparent 30%, rgba(156,163,175,0.5) 30%, rgba(156,163,175,0.5) 32%, transparent 32%)',
+                    },
+                  }}
+                />
+              </>
+            )}
+          </Paper>
+        )
+      })}
     </Box>
   )
 }
 
-export default CleanMorphingModal
+export default MultiWindowInterface
