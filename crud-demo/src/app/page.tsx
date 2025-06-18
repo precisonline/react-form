@@ -1,254 +1,73 @@
-'use client'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
+import NotesClient from './notes-client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+type Note = {
+  id: number
+  title: string
+  content: string
+  user_id: string
+  tags: string[]
+  is_favorite: boolean
+  created_at: string
+  updated_at: string
+}
 
-import { createBrowserClient } from '@supabase/ssr'
-import type { User } from '@supabase/auth-helpers-nextjs'
-import { useRouter } from 'next/navigation'
+export default async function NotesPage() {
+  const cookieStore = await cookies()
 
-import {
-  AppBar,
-  Toolbar,
-  Typography,
-  Button,
-  Container,
-  Box,
-  TextField,
-  Card,
-  CardContent,
-  CardActions,
-  CircularProgress,
-  Stack,
-} from '@mui/material'
-import DeleteIcon from '@mui/icons-material/Delete'
-import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
-
-type Note = { id: number; title: string; content: string }
-
-export default function HomePage() {
-  const router = useRouter()
-  // This is the generic client, used for auth purposes only
-  const supabase = createBrowserClient(
+  const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value
+        },
+      },
+    }
   )
 
-  const [user, setUser] = useState<User | null>(null)
-  const [schemaName, setSchemaName] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  // Notes state
-  const [notes, setNotes] = useState<Note[]>([])
-  const [title, setTitle] = useState('')
-  const [content, setContent] = useState('')
-
-  // ===================================================================
-  // ========= KEY CHANGE: Create a Schema-Specific Client =========
-  // ===================================================================
-  // We use useMemo to create a new Supabase client instance only when the
-  // schemaName changes. This new client is configured to ONLY work
-  // with the user's private schema.
-  const supabaseTenantClient = useMemo(() => {
-    if (!schemaName) return null
-
-    return createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        db: {
-          // This sets the schema for all queries from this client
-          schema: schemaName,
-        },
-      }
-    )
-  }, [schemaName])
-  // ===================================================================
-
-  const fetchNotes = useCallback(async () => {
-    // We must use the new, schema-specific client for data operations
-    if (!supabaseTenantClient) return
-
-    const { data, error } = await supabaseTenantClient
-      .from('notes')
-      .select('*')
-      .order('created_at', { ascending: false })
-
-    if (error) console.error('Error fetching notes:', error)
-    else setNotes(data as Note[])
-  }, [supabaseTenantClient]) // Depends on the memoized client
-
-  const handleCreateNote = async (e: React.FormEvent) => {
-    console.log('Schema Name on click:', schemaName)
-    e.preventDefault()
-    if (!supabaseTenantClient) return
-
-    await supabaseTenantClient.from('notes').insert({ title, content })
-    setTitle('')
-    setContent('')
-    fetchNotes()
+  if (!user) {
+    redirect('/auth')
   }
 
-  const handleDeleteNote = async (id: number) => {
-    if (!supabaseTenantClient) return
-    await supabaseTenantClient.from('notes').delete().eq('id', id)
-    fetchNotes()
-  }
+  const schemaName = user.user_metadata.schema_name
+  console.log('Schema Name from metadata:', schemaName)
 
-  // --- Auth and Session Handling ---
+  let notes: Note[] = []
 
-  useEffect(() => {
-    const getSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      if (session) {
-        setUser(session.user)
-        setSchemaName(session.user.user_metadata.schema_name)
-      }
-      setLoading(false)
+  if (schemaName) {
+    // Use RPC to query the tenant schema
+    const { data, error } = await supabase.rpc('get_tenant_notes', {
+      tenant_schema: schemaName,
+    })
+
+    if (error) {
+      console.error('Error fetching notes:', error)
+      console.error('Full error details:', JSON.stringify(error, null, 2))
+    } else {
+      notes = data as Note[]
+      console.log(
+        `✅ Successfully fetched ${notes.length} notes from ${schemaName}`
+      )
     }
-    getSession()
-  }, [supabase.auth])
-
-  // Fetch notes once the schema-specific client is ready
-  useEffect(() => {
-    if (supabaseTenantClient) {
-      fetchNotes()
-    }
-  }, [supabaseTenantClient, fetchNotes])
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    router.push('/auth')
-  }
-
-  // --- Render Logic ---
-
-  if (loading) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '100vh',
-          bgcolor: 'background.default',
-        }}
-      >
-        <CircularProgress />
-      </Box>
+  } else {
+    console.error(
+      'Could not fetch notes because schemaName is missing from user metadata!'
     )
   }
 
   return (
-    <>
-      <AppBar position='static'>
-        <Toolbar>
-          <Typography variant='h6' component='div' sx={{ flexGrow: 1 }}>
-            My Private Notes
-          </Typography>
-          <Typography
-            variant='body2'
-            sx={{ mr: 2, display: { xs: 'none', sm: 'block' } }}
-          >
-            {user?.email}
-          </Typography>
-          <Button color='inherit' onClick={handleSignOut}>
-            Sign Out
-          </Button>
-        </Toolbar>
-      </AppBar>
-
-      <Container sx={{ mt: 4 }}>
-        <Typography
-          variant='caption'
-          color='text.secondary'
-          gutterBottom
-          component='div'
-        >
-          Your data is stored in private schema:{' '}
-          <code
-            style={{
-              background: '#333',
-              padding: '2px 4px',
-              borderRadius: '4px',
-            }}
-          >
-            {schemaName}
-          </code>
-        </Typography>
-
-        <Card sx={{ my: 4, bgcolor: 'background.paper' }}>
-          <CardContent>
-            <Typography variant='h5' component='h2' gutterBottom>
-              Add a New Note
-            </Typography>
-            <Box component='form' onSubmit={handleCreateNote}>
-              <Stack spacing={2}>
-                <TextField
-                  label='Title'
-                  variant='outlined'
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  required
-                  fullWidth
-                />
-                <TextField
-                  label='Content'
-                  variant='outlined'
-                  multiline
-                  rows={4}
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  required
-                  fullWidth
-                />
-              </Stack>
-              <Button
-                type='submit'
-                variant='contained'
-                startIcon={<AddCircleOutlineIcon />}
-                sx={{ mt: 2 }}
-              >
-                Add Note
-              </Button>
-            </Box>
-          </CardContent>
-        </Card>
-
-        <Typography variant='h4' component='h2' gutterBottom>
-          Your Notes
-        </Typography>
-        <Stack spacing={2}>
-          {notes.length > 0 ? (
-            notes.map((note) => (
-              <Card key={note.id} sx={{ bgcolor: 'background.paper' }}>
-                <CardContent>
-                  <Typography variant='h6'>{note.title}</Typography>
-                  <Typography
-                    color='text.secondary'
-                    sx={{ whiteSpace: 'pre-wrap' }}
-                  >
-                    {note.content}
-                  </Typography>
-                </CardContent>
-                <CardActions sx={{ justifyContent: 'flex-end' }}>
-                  <Button
-                    size='small'
-                    color='secondary'
-                    startIcon={<DeleteIcon />}
-                    onClick={() => handleDeleteNote(note.id)}
-                  >
-                    Delete
-                  </Button>
-                </CardActions>
-              </Card>
-            ))
-          ) : (
-            <Typography>You have no notes yet. Add one above!</Typography>
-          )}
-        </Stack>
-      </Container>
-    </>
+    <NotesClient
+      initialNotes={notes}
+      user={user}
+      schemaName={schemaName || 'Not Found'}
+    />
   )
 }
