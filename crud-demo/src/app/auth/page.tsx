@@ -15,46 +15,56 @@ export default function AuthPage() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // We only care about the moment a user successfully signs in
       if (event === 'SIGNED_IN' && session) {
         console.log('✅ SIGNED_IN event detected for user:', session.user.email)
 
+        // Check if the schema_name already exists in the user's metadata.
+        // This prevents us from re-provisioning for a returning user.
         const isNewUser = !session.user.user_metadata.schema_name
         console.log('Is this a new user?', isNewUser)
 
         if (isNewUser) {
           console.log('🚀 Provisioning new tenant...')
 
+          // Step 1: Call the Edge Function
+          console.log('Calling "provision-tenant" Edge Function...')
           const { data: funcData, error: funcError } =
             await supabase.functions.invoke('provision-tenant', {
-              body: { tenant_name: session.user.email },
+              body: { tenant_name: session.user.email }, // Use email as a friendly name
             })
 
+          // Check for errors from the Edge Function call itself
           if (funcError) {
             console.error('❌ Error invoking Edge Function:', funcError.message)
-            return
+            return // Stop the process
           }
+          console.log('✅ Edge Function returned:', funcData)
 
-          const { tenant } = funcData
-          if (!tenant?.schema_name) {
+          // Step 2: Update the User's Metadata
+          const { schema_name } = funcData
+          if (!schema_name) {
             console.error('❌ Edge function did not return a schema_name!')
-            return
+            return // Stop the process
           }
-          const schema_name = tenant.schema_name
 
+          console.log(`Updating user metadata with schema_name: ${schema_name}`)
           const { error: updateError } = await supabase.auth.updateUser({
             data: { schema_name: schema_name },
           })
 
+          // Check for errors while updating the user
           if (updateError) {
             console.error(
               '❌ Error updating user metadata:',
               updateError.message
             )
-            return
+            return // Stop the process
           }
           console.log('✅ User metadata updated successfully.')
         }
 
+        // For both new and returning users, redirect to the main app page.
         console.log('Redirecting to homepage...')
         router.push('/')
         router.refresh() // Important to make sure layout re-fetches session data
