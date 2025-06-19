@@ -1,9 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
 import type { User } from '@supabase/auth-helpers-nextjs'
+import DOMPurify from 'dompurify'
+import axe from 'axe-core'
 
 import { createNote, deleteNote, updateNote } from './actions'
 
@@ -68,6 +70,18 @@ export default function NotesClient({
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
+  const axeRan = useRef(false)
+  useEffect(() => {
+    // Check if we're in development and if the flag is false
+    if (process.env.NODE_ENV === 'development' && !axeRan.current) {
+      axe.run().then((results) => {
+        console.log('Accessibility audit results:', results)
+      })
+      // Set the flag to true so this effect never runs its logic again
+      axeRan.current = true
+    }
+  }, [])
+
   // --- STATE MANAGEMENT ---
   const [notes, setNotes] = useState<Note[]>(initialNotes)
   const [newTitle, setNewTitle] = useState('')
@@ -93,16 +107,30 @@ export default function NotesClient({
     setError(null)
 
     const formData = new FormData(event.currentTarget)
+    const title = formData.get('title')?.toString() || ''
+    const content = formData.get('content')?.toString() || ''
+    const newNote = {
+      id: Date.now(), // Optimistic ID
+      title: title,
+      content: content,
+      user_id: user.id,
+      created_at: new Date().toISOString(),
+    }
+
+    setNotes((prevNotes) => [newNote as Note, ...prevNotes])
+    setNewTitle('')
+    setNewContent('')
+
     const result = await createNote(formData)
 
-    if (result.success && result.data) {
-      // Add the new note to the top of the client-side list
-      setNotes((prevNotes) => [result.data as Note, ...prevNotes])
-      setNewTitle('')
-      setNewContent('')
-    } else {
-      setError(result.error || 'Failed to create note.')
+    if (!result.success || !result.data) {
+      setError(result.error || 'Failed to create note. Please try again.')
+      // Revert optimistic update
+      setNotes((prevNotes) =>
+        prevNotes.filter((note) => note.id !== newNote.id)
+      )
     }
+
     setIsCreating(false)
   }
 
@@ -117,7 +145,10 @@ export default function NotesClient({
 
     if (!result?.success) {
       // If the deletion fails, revert the change and show an error
-      setError(result?.error || 'Failed to delete the note.')
+      setError(
+        result?.error ||
+          `Failed to delete the note (ID: ${noteId}). Please try again.`
+      )
       setNotes(originalNotes)
     }
     setIsDeleting(null)
@@ -129,6 +160,15 @@ export default function NotesClient({
     setIsUpdating(true)
     setError(null)
 
+    const originalNotes = notes
+    const updatedNote = { ...editingNote }
+
+    setNotes((prevNotes) =>
+      prevNotes.map((note) =>
+        note.id === editingNote.id ? (updatedNote as Note) : note
+      )
+    )
+
     const result = await updateNote(
       editingNote.id,
       editingNote.title,
@@ -136,217 +176,242 @@ export default function NotesClient({
     )
 
     if (result.success && result.data) {
-      // Update the note in the client-side list
-      setNotes((prevNotes) =>
-        prevNotes.map((note) =>
-          note.id === editingNote.id ? (result.data as Note) : note
-        )
-      )
       setEditingNote(null) // Close the modal
     } else {
-      setError(result.error || 'Failed to update note.')
+      setError(
+        result.error ||
+          `Failed to update note (ID: ${editingNote.id}). Please try again.`
+      )
+      setNotes(originalNotes)
     }
     setIsUpdating(false)
   }
 
-  return (
-    <>
-      <AppBar position='static'>
-        <Toolbar>
-          <Typography variant='h6' component='div' sx={{ flexGrow: 1 }}>
-            My Private Notes
-          </Typography>
-          <Typography
-            variant='body2'
-            sx={{ mr: 2, display: { xs: 'none', sm: 'block' } }}
-          >
-            {user?.email}
-          </Typography>
-          <Button color='inherit' onClick={handleSignOut}>
-            Sign Out
-          </Button>
-        </Toolbar>
-      </AppBar>
-
-      <Container sx={{ mt: 4 }}>
-        <Typography
-          variant='caption'
-          color='text.secondary'
-          gutterBottom
-          component='div'
-        >
-          Your data is stored in private schema:{' '}
-          <code
-            style={{
-              background: '#333',
-              padding: '2px 4px',
-              borderRadius: '4px',
-            }}
-          >
-            {schemaName}
-          </code>
-        </Typography>
-
-        {error && (
-          <Alert severity='error' sx={{ my: 2 }} onClose={() => setError(null)}>
-            {error}
-          </Alert>
-        )}
-
-        <Card sx={{ my: 4, bgcolor: 'background.paper' }}>
-          <CardContent>
-            <Typography variant='h5' component='h2' gutterBottom>
-              Add a New Note
+  try {
+    return (
+      <>
+        <AppBar position='static'>
+          <Toolbar>
+            <Typography variant='h6' component='div' sx={{ flexGrow: 1 }}>
+              My Private Notes
             </Typography>
-            <Box component='form' onSubmit={handleCreateNote}>
-              <Stack spacing={2}>
-                <TextField
-                  name='title'
-                  label='Title'
-                  variant='outlined'
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  required
-                  fullWidth
+            <Typography
+              variant='body2'
+              sx={{ mr: 2, display: { xs: 'none', sm: 'block' } }}
+            >
+              {user?.email}
+            </Typography>
+            <Button color='inherit' onClick={handleSignOut}>
+              Sign Out
+            </Button>
+          </Toolbar>
+        </AppBar>
+
+        <Container sx={{ mt: 4 }}>
+          <Typography
+            variant='caption'
+            color='text.secondary'
+            gutterBottom
+            component='div'
+          >
+            Your data is stored in private schema:{' '}
+            <code
+              style={{
+                background: '#333',
+                padding: '2px 4px',
+                borderRadius: '4px',
+              }}
+            >
+              {schemaName}
+            </code>
+          </Typography>
+
+          {error && (
+            <Alert
+              severity='error'
+              sx={{ my: 2 }}
+              onClose={() => setError(null)}
+            >
+              {error}
+            </Alert>
+          )}
+
+          <Card sx={{ my: 4, bgcolor: 'background.paper' }}>
+            <CardContent>
+              <Typography variant='h5' component='h2' gutterBottom>
+                Add a New Note
+              </Typography>
+              <Box component='form' onSubmit={handleCreateNote}>
+                <Stack spacing={2}>
+                  <TextField
+                    name='title'
+                    label='Title'
+                    variant='outlined'
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    required
+                    fullWidth
+                    disabled={isCreating}
+                  />
+                  <TextField
+                    name='content'
+                    label='Content'
+                    variant='outlined'
+                    multiline
+                    rows={4}
+                    value={newContent}
+                    onChange={(e) => setNewContent(e.target.value)}
+                    required
+                    fullWidth
+                    disabled={isCreating}
+                  />
+                </Stack>
+                <Button
+                  type='submit'
+                  variant='contained'
+                  startIcon={
+                    isCreating ? (
+                      <CircularProgress size={20} color='inherit' />
+                    ) : (
+                      <AddCircleOutlineIcon />
+                    )
+                  }
+                  sx={{ mt: 2 }}
                   disabled={isCreating}
-                />
-                <TextField
-                  name='content'
-                  label='Content'
-                  variant='outlined'
-                  multiline
-                  rows={4}
-                  value={newContent}
-                  onChange={(e) => setNewContent(e.target.value)}
-                  required
-                  fullWidth
-                  disabled={isCreating}
-                />
-              </Stack>
+                >
+                  {isCreating ? 'Adding...' : 'Add Note'}
+                </Button>
+              </Box>
+            </CardContent>
+          </Card>
+
+          <Typography variant='h4' component='h2' gutterBottom>
+            Your Notes
+          </Typography>
+          <Stack spacing={2}>
+            {notes.length > 0 ? (
+              notes.map((note) => (
+                <Card key={note.id} sx={{ bgcolor: 'background.paper' }}>
+                  <CardContent>
+                    <Typography variant='h6'>
+                      {DOMPurify.sanitize(note.title)}
+                    </Typography>
+                    <Typography
+                      color='text.secondary'
+                      sx={{ whiteSpace: 'pre-wrap' }}
+                    >
+                      {DOMPurify.sanitize(note.content)}
+                    </Typography>
+                    {note.created_at && (
+                      <Typography
+                        variant='caption'
+                        color='text.secondary'
+                        sx={{ mt: 1, display: 'block' }}
+                      >
+                        Created:{' '}
+                        {new Date(note.created_at).toLocaleDateString()}
+                      </Typography>
+                    )}
+                  </CardContent>
+                  <CardActions sx={{ justifyContent: 'flex-end' }}>
+                    <IconButton
+                      onClick={() => setEditingNote(note)}
+                      disabled={isDeleting !== null}
+                    >
+                      <EditIcon />
+                    </IconButton>
+                    <Button
+                      size='small'
+                      color='secondary'
+                      startIcon={
+                        isDeleting === note.id ? (
+                          <CircularProgress size={16} color='inherit' />
+                        ) : (
+                          <DeleteIcon />
+                        )
+                      }
+                      onClick={() => handleDeleteNote(note.id)}
+                      disabled={isDeleting !== null}
+                    >
+                      {isDeleting === note.id ? 'Deleting...' : 'Delete'}
+                    </Button>
+                  </CardActions>
+                </Card>
+              ))
+            ) : (
+              <Typography>You have no notes yet. Add one above!</Typography>
+            )}
+          </Stack>
+        </Container>
+
+        {/* Edit Note Modal */}
+        <Modal open={editingNote !== null} onClose={() => setEditingNote(null)}>
+          <Box sx={modalStyle}>
+            <Typography variant='h6' component='h2'>
+              Edit Note
+            </Typography>
+            <Stack spacing={2} sx={{ mt: 2 }}>
+              <TextField
+                label='Title'
+                variant='outlined'
+                value={editingNote?.title || ''}
+                onChange={(e) => {
+                  if (editingNote) {
+                    setEditingNote({ ...editingNote, title: e.target.value })
+                  }
+                }}
+                fullWidth
+              />
+              <TextField
+                label='Content'
+                variant='outlined'
+                multiline
+                rows={4}
+                value={editingNote?.content || ''}
+                onChange={(e) => {
+                  if (editingNote) {
+                    setEditingNote({
+                      ...editingNote,
+                      content: e.target.value,
+                    })
+                  }
+                }}
+                fullWidth
+              />
+            </Stack>
+            <Box
+              sx={{
+                mt: 3,
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: 1,
+              }}
+            >
+              <Button onClick={() => setEditingNote(null)} color='secondary'>
+                Cancel
+              </Button>
               <Button
-                type='submit'
+                onClick={handleUpdateNote}
                 variant='contained'
-                startIcon={
-                  isCreating ? (
-                    <CircularProgress size={20} color='inherit' />
-                  ) : (
-                    <AddCircleOutlineIcon />
-                  )
-                }
-                sx={{ mt: 2 }}
-                disabled={isCreating}
+                disabled={isUpdating}
+                startIcon={isUpdating ? <CircularProgress size={20} /> : null}
               >
-                {isCreating ? 'Adding...' : 'Add Note'}
+                {isUpdating ? 'Saving...' : 'Save Changes'}
               </Button>
             </Box>
-          </CardContent>
-        </Card>
-
-        <Typography variant='h4' component='h2' gutterBottom>
-          Your Notes
-        </Typography>
-        <Stack spacing={2}>
-          {notes.length > 0 ? (
-            notes.map((note) => (
-              <Card key={note.id} sx={{ bgcolor: 'background.paper' }}>
-                <CardContent>
-                  <Typography variant='h6'>{note.title}</Typography>
-                  <Typography
-                    color='text.secondary'
-                    sx={{ whiteSpace: 'pre-wrap' }}
-                  >
-                    {note.content}
-                  </Typography>
-                  {note.created_at && (
-                    <Typography
-                      variant='caption'
-                      color='text.secondary'
-                      sx={{ mt: 1, display: 'block' }}
-                    >
-                      Created: {new Date(note.created_at).toLocaleDateString()}
-                    </Typography>
-                  )}
-                </CardContent>
-                <CardActions sx={{ justifyContent: 'flex-end' }}>
-                  <IconButton
-                    onClick={() => setEditingNote(note)}
-                    disabled={isDeleting !== null}
-                  >
-                    <EditIcon />
-                  </IconButton>
-                  <Button
-                    size='small'
-                    color='secondary'
-                    startIcon={
-                      isDeleting === note.id ? (
-                        <CircularProgress size={16} color='inherit' />
-                      ) : (
-                        <DeleteIcon />
-                      )
-                    }
-                    onClick={() => handleDeleteNote(note.id)}
-                    disabled={isDeleting !== null}
-                  >
-                    {isDeleting === note.id ? 'Deleting...' : 'Delete'}
-                  </Button>
-                </CardActions>
-              </Card>
-            ))
-          ) : (
-            <Typography>You have no notes yet. Add one above!</Typography>
-          )}
-        </Stack>
-      </Container>
-
-      {/* Edit Note Modal */}
-      <Modal open={editingNote !== null} onClose={() => setEditingNote(null)}>
-        <Box sx={modalStyle}>
-          <Typography variant='h6' component='h2'>
-            Edit Note
-          </Typography>
-          <Stack spacing={2} sx={{ mt: 2 }}>
-            <TextField
-              label='Title'
-              variant='outlined'
-              value={editingNote?.title || ''}
-              onChange={(e) =>
-                setEditingNote((prev) =>
-                  prev ? { ...prev, title: e.target.value } : null
-                )
-              }
-              fullWidth
-            />
-            <TextField
-              label='Content'
-              variant='outlined'
-              multiline
-              rows={4}
-              value={editingNote?.content || ''}
-              onChange={(e) =>
-                setEditingNote((prev) =>
-                  prev ? { ...prev, content: e.target.value } : null
-                )
-              }
-              fullWidth
-            />
-          </Stack>
-          <Box
-            sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end', gap: 1 }}
-          >
-            <Button onClick={() => setEditingNote(null)} color='secondary'>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleUpdateNote}
-              variant='contained'
-              disabled={isUpdating}
-              startIcon={isUpdating ? <CircularProgress size={20} /> : null}
-            >
-              {isUpdating ? 'Saving...' : 'Save Changes'}
-            </Button>
           </Box>
-        </Box>
-      </Modal>
-    </>
-  )
+        </Modal>
+      </>
+    )
+  } catch (error: unknown) {
+    console.error('Client-side error:', error)
+    return (
+      <Container sx={{ mt: 4 }}>
+        <Alert severity='error'>
+          An unexpected error occurred on the client-side. Please try again
+          later.
+        </Alert>
+      </Container>
+    )
+  }
 }

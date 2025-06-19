@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "jest --watchAll --config jest.config.js"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -17,19 +18,35 @@
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/auth-ui-react": "^0.4.7",
     "@supabase/ssr": "^0.6.1",
+    "dompurify": "^3.2.6",
     "next": "15.3.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@babel/core": "^7.27.4",
+    "@babel/plugin-syntax-import-attributes": "^7.27.1",
+    "@babel/preset-env": "^7.27.2",
+    "@babel/preset-react": "^7.27.1",
+    "@babel/preset-typescript": "^7.27.1",
     "@eslint/eslintrc": "^3",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
     "@types/deno": "^2.3.0",
+    "@types/jest": "^30.0.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "babel-jest": "^30.0.2",
     "eslint": "^9",
     "eslint-config-next": "15.3.3",
+    "jest": "^30.0.2",
+    "jest-environment-jsdom": "^30.0.2",
     "supabase": "^2.24.3",
+    "ts-jest": "^29.4.0",
     "typescript": "^5"
+  },
+  "jest": {
+    "testEnvironment": "jsdom"
   }
 }

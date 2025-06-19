@@ -1,0 +1,12 @@
+{
+  "devDependencies": {
+    "@babel/plugin-syntax-typescript": "^7.27.1",
+    "@types/jest": "^30.0.0",
+    "ts-jest": "^29.4.0"
+  },
+  "dependencies": {
+    "util": "^0.12.5",
+    "uuid": "^11.1.0",
+    "whatwg-fetch": "^3.6.20"
+  }
+}

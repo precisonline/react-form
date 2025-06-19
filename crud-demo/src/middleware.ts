@@ -2,7 +2,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({
+  const response = NextResponse.next({
     request: {
       headers: request.headers,
     },
@@ -17,66 +17,43 @@ export async function middleware(request: NextRequest) {
           return request.cookies.get(name)?.value
         },
         set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value,
-            ...options,
-          })
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          })
+          if (options) {
+            response.cookies.set({
+              name,
+              value,
+              ...options,
+            })
+          } else {
+            response.cookies.set(name, value)
+          }
         },
-        remove(name: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value: '',
-            ...options,
-          })
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          response.cookies.set({
-            name,
-            value: '',
-            ...options,
-          })
+        remove(name: string) {
+          response.cookies.delete(name)
         },
       },
     }
   )
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
-  // if a user is not logged in and they are trying to access a protected page
-  if (!user && request.nextUrl.pathname !== '/auth') {
-    // redirect them to the /auth page
-    const url = request.nextUrl.clone()
-    url.pathname = '/auth'
-    return NextResponse.redirect(url)
+    // if a user is not logged in and they are trying to access a protected page
+    if (!user && request.nextUrl.pathname !== '/auth') {
+      return NextResponse.redirect(new URL('/auth', request.url))
+    }
+
+    // if a user IS logged in and they are trying to access the '/auth' page
+    if (user && request.nextUrl.pathname === '/auth') {
+      return NextResponse.redirect(new URL('/', request.url))
+    }
+
+    return response
+  } catch (error) {
+    console.error('Error in middleware:', error)
+    return response
   }
-
-  // if a user IS logged in and they are trying to access the '/auth' page
-  if (user && request.nextUrl.pathname === '/auth') {
-    // redirect them to the main app page ('/')
-    const url = request.nextUrl.clone()
-    url.pathname = '/'
-    return NextResponse.redirect(url)
-  }
-
-  await supabase.auth.getSession()
-
-  return response
 }
 
 export const config = {
@@ -86,7 +63,6 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     
      */
     '/((?!_next/static|_next/image|favicon.ico).*)',
   ],

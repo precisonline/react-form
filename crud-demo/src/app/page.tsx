@@ -37,7 +37,7 @@ export default async function NotesPage() {
     redirect('/auth')
   }
 
-  const schemaName = user.user_metadata.schema_name
+  const schemaName = user.user_metadata.schemaName
   console.log('Schema Name from metadata:', schemaName)
 
   let notes: Note[] = []

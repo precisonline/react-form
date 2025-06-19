@@ -9,7 +9,7 @@ const corsHeaders = {
 interface TenantRequest {
   tenant_name?: string
   user_email?: string
-  custom_settings?: Record<string, any>
+  custom_settings?: Record<string, unknown>
 }
 
 Deno.serve(async (req: Request) => {
@@ -111,6 +111,15 @@ Deno.serve(async (req: Request) => {
       GRANT ALL ON TABLE "${schemaName}".tenant_settings TO authenticated;
       GRANT ALL ON TABLE "${schemaName}".user_profiles TO authenticated;
       
+      -- Enable Row Level Security (RLS) on the notes table
+      ALTER TABLE "${schemaName}".notes ENABLE ROW LEVEL SECURITY;
+
+      -- Create RLS policy for notes table
+      CREATE POLICY "Enable read access to notes based on user_id" ON "${schemaName}".notes
+      AS PERMISSIVE FOR ALL
+      TO authenticated
+      USING (user_id = auth.uid());
+
       -- Grant sequence permissions
       GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA "${schemaName}" TO authenticated;
       
@@ -118,8 +127,8 @@ Deno.serve(async (req: Request) => {
       CREATE OR REPLACE FUNCTION update_updated_at_column()
       RETURNS TRIGGER AS $$
       BEGIN
-        NEW.updated_at = now();
-        RETURN NEW;
+          NEW.updated_at = now();
+          RETURN NEW;
       END;
       $$ language 'plpgsql';
       
@@ -145,9 +154,9 @@ Deno.serve(async (req: Request) => {
       
       -- Insert initial tenant settings
       INSERT INTO "${schemaName}".tenant_settings (setting_key, setting_value) VALUES 
-        ('tenant_name', '"${displayName}"'),
-        ('created_by', '"${tenantData.user_email || 'system'}"'),
-        ('theme', '"default"'),
+        ('tenant_name', '${displayName}'),
+        ('created_by', '${tenantData.user_email || 'system'}'),
+        ('theme', '{"value": "default"}'),
         ('features', '{"notes": true, "categories": true, "sharing": false}'),
         ('limits', '{"max_notes": 1000, "max_users": 10}');
     `
@@ -164,6 +173,52 @@ Deno.serve(async (req: Request) => {
     console.log(
       `✅ Successfully created tenant: ${displayName} (${schemaName})`
     )
+
+    // --- FIX ---: This entire block was added to link the new schema to the user.
+    if (tenantData.user_email) {
+      try {
+        // 1. Find the user by their email address
+        const {
+          data: { users },
+          error: userError,
+        } = await supabaseAdmin.auth.admin.listUsers({
+          email: tenantData.user_email,
+        })
+
+        if (userError)
+          throw new Error(`Could not find user: ${userError.message}`)
+        if (!users || users.length === 0)
+          throw new Error(`User with email ${tenantData.user_email} not found.`)
+
+        const userToUpdate = users[0]
+
+        // 2. Update the user's metadata with the new schema name
+        const { error: updateUserError } =
+          await supabaseAdmin.auth.admin.updateUserById(userToUpdate.id, {
+            user_metadata: {
+              ...userToUpdate.user_metadata, // Preserve existing metadata
+              schemaName: schemaName,
+            },
+          })
+
+        if (updateUserError) {
+          throw new Error(
+            `Failed to update user metadata: ${updateUserError.message}`
+          )
+        }
+
+        console.log(
+          `✅ Successfully updated metadata for user: ${userToUpdate.email}`
+        )
+      } catch (metaError) {
+        // If this fails, we should still return a success for the provisioning, but log the error.
+        if (metaError instanceof Error) {
+          console.error(`❌ Metadata update failed: ${metaError.message}`)
+        } else {
+          console.error(`❌ Metadata update failed: ${String(metaError)}`)
+        }
+      }
+    }
 
     // Return comprehensive tenant information
     const response = {
@@ -209,20 +264,27 @@ Deno.serve(async (req: Request) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
-  } catch (error: any) {
-    console.error('❌ Tenant provisioning failed:', error.message)
+  } catch (error: unknown) {
+    let message = 'Tenant provisioning failed'
+    const statusCode = 500
+    if (error instanceof Error) {
+      message = `Tenant provisioning failed: ${error.message}`
+    } else {
+      message = `Tenant provisioning failed: ${String(error)}`
+    }
 
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: 'Tenant provisioning failed',
-        message: error.message,
-        timestamp: new Date().toISOString(),
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      }
-    )
+    console.error('❌', message, error)
+
+    const responseBody = {
+      success: false,
+      error: 'Tenant provisioning failed',
+      message,
+      timestamp: new Date().toISOString(),
+    }
+
+    return new Response(JSON.stringify(responseBody), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: statusCode,
+    })
   }
 })
