@@ -1,0 +1,1 @@
+CREATE INDEX idx_notes_user_id ON public.notes (user_id);

@@ -3,20 +3,10 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import NotesClient from './notes-client'
 
-type Note = {
-  id: number
-  title: string
-  content: string
-  user_id: string
-  tags: string[]
-  is_favorite: boolean
-  created_at: string
-  updated_at: string
-}
-
 export default async function NotesPage() {
   const cookieStore = await cookies()
 
+  // 1. Create a server-side Supabase client
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -29,45 +19,27 @@ export default async function NotesPage() {
     }
   )
 
+  // 2. Get the current user
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
+  // 3. Protect the route
   if (!user) {
     redirect('/auth')
   }
 
-  const schemaName = user.user_metadata.schemaName
-  console.log('Schema Name from metadata:', schemaName)
+  // 4. Fetch the initial data for the page
+  const { data: notes, error } = await supabase.from('notes').select('*')
 
-  let notes: Note[] = []
-
-  if (schemaName) {
-    // Use RPC to query the tenant schema
-    const { data, error } = await supabase.rpc('get_tenant_notes', {
-      tenant_schema: schemaName,
-    })
-
-    if (error) {
-      console.error('Error fetching notes:', error)
-      console.error('Full error details:', JSON.stringify(error, null, 2))
-    } else {
-      notes = data as Note[]
-      console.log(
-        `✅ Successfully fetched ${notes.length} notes from ${schemaName}`
-      )
-    }
-  } else {
-    console.error(
-      'Could not fetch notes because schemaName is missing from user metadata!'
-    )
+  // 5. Handle potential errors during the initial data fetch
+  if (error) {
+    // For the developer: Log the error to the server console
+    console.error('Error fetching initial notes:', error)
+    // For the user: We'll render the page with an empty list of notes.
+    // The NotesClient component will then show the "You have no notes yet" message.
   }
 
-  return (
-    <NotesClient
-      initialNotes={notes}
-      user={user}
-      schemaName={schemaName || 'Not Found'}
-    />
-  )
+  // 6. Render the Client Component, passing the initial data down as props
+  return <NotesClient initialNotes={notes || []} user={user} />
 }

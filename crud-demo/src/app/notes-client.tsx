@@ -43,7 +43,6 @@ type Note = {
 type NotesClientProps = {
   initialNotes: Note[]
   user: User
-  schemaName: string
 }
 
 // Style for the modal
@@ -59,11 +58,20 @@ const modalStyle = {
   p: 4,
 } as const
 
-export default function NotesClient({
-  initialNotes,
-  user,
-  schemaName,
-}: NotesClientProps) {
+const SafeHtml = ({ content }: { content: string }) => {
+  const [sanitizedContent, setSanitizedContent] = useState('')
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setSanitizedContent(DOMPurify.sanitize(content))
+    }
+  }, [content])
+
+  return <div dangerouslySetInnerHTML={{ __html: sanitizedContent }} />
+}
+// --- END OF NEW COMPONENT ---
+
+export default function NotesClient({ initialNotes, user }: NotesClientProps) {
   const router = useRouter()
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -97,7 +105,7 @@ export default function NotesClient({
   // --- AUTH HANDLER ---
   const handleSignOut = async () => {
     await supabase.auth.signOut()
-    router.push('/auth') // No need for router.refresh() here
+    router.push('/auth')
   }
 
   // --- CRUD HANDLERS ---
@@ -110,7 +118,7 @@ export default function NotesClient({
     const title = formData.get('title')?.toString() || ''
     const content = formData.get('content')?.toString() || ''
     const newNote = {
-      id: Date.now(), // Optimistic ID
+      id: Date.now(),
       title: title,
       content: content,
       user_id: user.id,
@@ -135,7 +143,6 @@ export default function NotesClient({
   }
 
   const handleDeleteNote = async (noteId: number) => {
-    // Optimistic UI: Remove note from UI immediately
     const originalNotes = notes
     setNotes((prevNotes) => prevNotes.filter((note) => note.id !== noteId))
     setIsDeleting(noteId)
@@ -193,7 +200,7 @@ export default function NotesClient({
         <AppBar position='static'>
           <Toolbar>
             <Typography variant='h6' component='div' sx={{ flexGrow: 1 }}>
-              My Private Notes
+              Notes
             </Typography>
             <Typography
               variant='body2'
@@ -208,7 +215,7 @@ export default function NotesClient({
         </AppBar>
 
         <Container sx={{ mt: 4 }}>
-          <Typography
+          {/*<Typography
             variant='caption'
             color='text.secondary'
             gutterBottom
@@ -224,7 +231,7 @@ export default function NotesClient({
             >
               {schemaName}
             </code>
-          </Typography>
+          </Typography>*/}
 
           {error && (
             <Alert
@@ -293,25 +300,17 @@ export default function NotesClient({
               notes.map((note) => (
                 <Card key={note.id} sx={{ bgcolor: 'background.paper' }}>
                   <CardContent>
-                    <Typography variant='h6'>
-                      {DOMPurify.sanitize(note.title)}
+                    <Typography variant='h6' component='div'>
+                      <SafeHtml content={note.title} />
                     </Typography>
                     <Typography
                       color='text.secondary'
                       sx={{ whiteSpace: 'pre-wrap' }}
+                      component='div'
                     >
-                      {DOMPurify.sanitize(note.content)}
+                      <SafeHtml content={note.content} />
                     </Typography>
-                    {note.created_at && (
-                      <Typography
-                        variant='caption'
-                        color='text.secondary'
-                        sx={{ mt: 1, display: 'block' }}
-                      >
-                        Created:{' '}
-                        {new Date(note.created_at).toLocaleDateString()}
-                      </Typography>
-                    )}
+                    {/* ... */}
                   </CardContent>
                   <CardActions sx={{ justifyContent: 'flex-end' }}>
                     <IconButton
