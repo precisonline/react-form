@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { ThemeProvider, createTheme } from '@mui/material/styles'
+import { Alert } from '@mui/material'
 import CssBaseline from '@mui/material/CssBaseline'
 import Container from '@mui/material/Container'
 import Typography from '@mui/material/Typography'
@@ -26,64 +27,76 @@ const darkTheme = createTheme({
 
 export default function Home() {
   const [notes, setNotes] = useState<Note[]>([])
+  const [error, setError] = useState<string | null>(null)
   const [openModal, setOpenModal] = useState(false)
   const [selectedNote, setSelectedNote] = useState<Note | null>(null)
   const supabase = createClientComponentClient()
 
-  useEffect(() => {
-    async function getNotes() {
-      const { data, error } = await supabase
-        .from('notes')
-        .select('*')
-        .order('created_at', { ascending: false })
+  const getNotes = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('notes')
+      .select('*')
+      .order('created_at', { ascending: false })
 
-      if (error) {
-        console.error('Error fetching notes:', error)
-      } else {
-        setNotes((data as Note[]) || [])
-      }
+    if (error) {
+      console.error('Error fetching notes:', error)
+      setError(error.message)
+    } else {
+      setNotes((data as Note[]) || [])
     }
-
-    getNotes()
   }, [supabase])
 
+  useEffect(() => {
+    getNotes()
+  }, [getNotes])
+
   const handleCreateNote = async (newNote: Omit<Note, 'id' | 'created_at'>) => {
-    const { data, error } = await supabase
+    setError(null)
+
+    const { error: insertError } = await supabase
       .from('notes')
       .insert([newNote])
       .select()
       .single()
 
-    if (error) {
-      console.error('Error creating note:', error)
+    if (insertError) {
+      console.error('Error creating note:', insertError)
+      setError(insertError.message)
     } else {
-      setNotes([...notes, data])
+      await getNotes() // Refetch notes to get the latest list
     }
   }
 
   const handleUpdateNote = async (updatedNote: Note) => {
-    const { data, error } = await supabase
+    setError(null)
+    const { error: updateError } = await supabase
       .from('notes')
       .update({ title: updatedNote.title, content: updatedNote.content })
       .eq('id', updatedNote.id)
       .select()
       .single()
 
-    if (error) {
-      console.error('Error updating note:', error)
+    if (updateError) {
+      console.error('Error updating note:', updateError)
+      setError(updateError.message)
     } else {
-      setNotes(notes.map((note) => (note.id === updatedNote.id ? data : note)))
+      await getNotes() // Refetch notes to get the latest list
       setOpenModal(false)
     }
   }
 
   const handleDeleteNote = async (id: string) => {
-    const { error } = await supabase.from('notes').delete().eq('id', id)
+    setError(null)
+    const { error: deleteError } = await supabase
+      .from('notes')
+      .delete()
+      .eq('id', id)
 
-    if (error) {
-      console.error('Error deleting note:', error)
+    if (deleteError) {
+      console.error('Error deleting note:', deleteError)
+      setError(deleteError.message)
     } else {
-      setNotes(notes.filter((note) => note.id !== id))
+      await getNotes() // Refetch notes to get the latest list
     }
   }
 
@@ -111,6 +124,13 @@ export default function Home() {
           >
             Notes
           </Typography>
+
+          {error && (
+            <Alert severity='error' onClose={() => setError(null)}>
+              {error}
+            </Alert>
+          )}
+
           <NoteForm onCreate={handleCreateNote} />
           <NoteList
             notes={notes}
