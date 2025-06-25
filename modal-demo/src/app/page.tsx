@@ -232,7 +232,7 @@ const MultiWindowInterface = () => {
                 { label: 'Revenue', value: '$847K', change: '+12%' },
                 { label: 'Users', value: '23,451', change: '+8%' },
               ].map((metric, i) => (
-                <Grid item xs={6} key={i}>
+                <Grid xs={6} key={i}>
                   <Paper
                     sx={{
                       p: 2,
@@ -336,7 +336,7 @@ const MultiWindowInterface = () => {
 
           <Grid container spacing={3} justifyContent='center'>
             {Object.entries(WINDOW_CONFIGS).map(([type, config]) => (
-              <Grid item xs={12} md={4} key={type}>
+              <Grid xs={12} md={4} key={type}>
                 <Card
                   onClick={() =>
                     openWindow(type as keyof typeof WINDOW_CONFIGS)
@@ -470,6 +470,7 @@ const MultiWindowInterface = () => {
                       transform: 'scale(1.05)',
                     },
                   }}
+                  aria-label={window.isMaximized ? 'Minimize' : 'Maximize'}
                 >
                   {window.isMaximized ? (
                     <Minimize2 size={16} />
@@ -535,6 +536,7 @@ const MultiWindowInterface = () => {
                   }}
                 />
                 <Box
+                  data-testid='resize-handle-se'
                   onMouseDown={(e) =>
                     handleMouseDown(e, window.id, 'resize', 'se')
                   }

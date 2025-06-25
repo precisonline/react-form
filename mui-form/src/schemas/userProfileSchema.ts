@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { v4 as uuidv4 } from 'uuid'
 
 // --- Reusable Constants ---
-export const addressTypes = ['Billing', 'Shipping', 'Home'] as const
+export const addressTypes = ['Billing', 'Shipping', 'Home', 'Other'] as const
 export const countries = [
   'USA',
   'Canada',
@@ -16,8 +16,22 @@ export const countries = [
   'Other',
 ] as const
 
-// --- Schemas for validation logic ---
-export const usaAddressValidation = z.object({
+const otherCountries = [
+  'Germany',
+  'France',
+  'Australia',
+  'Japan',
+  'Brazil',
+  'India',
+  'Other',
+] as const
+
+// --- Country-Specific Schemas (Standalone) ---
+const usaAddressSchema = z.object({
+  id: z.string().uuid(),
+  addressType: z.enum(addressTypes),
+  addressLine2: z.string().optional(),
+  country: z.literal('USA'),
   usaStreetAddress: z.string().min(1, 'Street address is required for USA'),
   usaCity: z.string().min(1, 'City is required for USA'),
   usaState: z.string().min(1, 'State is required for USA'),
@@ -26,7 +40,11 @@ export const usaAddressValidation = z.object({
     .regex(/^\d{5}(?:[-\s]\d{4})?$/, 'Invalid USA ZIP code format'),
 })
 
-export const canadaAddressValidation = z.object({
+const canadaAddressSchema = z.object({
+  id: z.string().uuid(),
+  addressType: z.enum(addressTypes),
+  addressLine2: z.string().optional(),
+  country: z.literal('Canada'),
   canadaStreetAddress: z
     .string()
     .min(1, 'Street address is required for Canada'),
@@ -40,7 +58,11 @@ export const canadaAddressValidation = z.object({
     ),
 })
 
-export const ukAddressValidation = z.object({
+const ukAddressSchema = z.object({
+  id: z.string().uuid(),
+  addressType: z.enum(addressTypes),
+  addressLine2: z.string().optional(),
+  country: z.literal('UK'),
   ukStreetAddress: z.string().min(1, 'Street address is required for UK'),
   ukTownCity: z.string().min(1, 'Town/City is required for UK'),
   ukCounty: z.string().optional(),
@@ -49,68 +71,32 @@ export const ukAddressValidation = z.object({
     .regex(/^[A-Z]{1,2}\d[A-Z\d]? ?\d[A-Z]{2}$/i, 'Invalid UK postcode format'),
 })
 
-export const genericAddressValidation = z.object({
+const otherCountrySchema = z.object({
+  id: z.string().uuid(),
+  addressType: z.enum(addressTypes),
+  addressLine2: z.string().optional(),
+  country: z.enum(otherCountries),
   addressLine1: z.string().min(1, 'Address Line 1 is required'),
   cityOrTown: z.string().min(1, 'City / Town is required'),
   stateOrProvinceOrRegion: z.string().optional(),
   postalOrZipCode: z.string().optional(),
 })
 
-// --- Schema for a SINGLE Address ---
-export const addressSchema = z
-  .object({
-    id: z.string().uuid(),
-    addressType: z.enum(addressTypes, {
-      required_error: 'Please select an address type',
-    }),
-    country: z
-      .enum(countries, { required_error: 'Please select a country' })
-      .refine((value) => !!value, { message: 'Please select a country' }),
-    addressLine2: z.string().optional(),
-    // All specific and generic address fields are optional at the base level
-    usaStreetAddress: z.string().optional(),
-    usaCity: z.string().optional(),
-    usaState: z.string().optional(),
-    usaZipCode: z.string().optional(),
-    canadaStreetAddress: z.string().optional(),
-    canadaCity: z.string().optional(),
-    canadaProvince: z.string().optional(),
-    canadaPostalCode: z.string().optional(),
-    ukStreetAddress: z.string().optional(),
-    ukTownCity: z.string().optional(),
-    ukCounty: z.string().optional(),
-    ukPostcode: z.string().optional(),
-    addressLine1: z.string().optional(),
-    cityOrTown: z.string().optional(),
-    stateOrProvinceOrRegion: z.string().optional(),
-    postalOrZipCode: z.string().optional(),
-  })
-  .superRefine((data, ctx) => {
-    const addIssues = (errors: z.ZodIssue[]) => {
-      errors.forEach((err) => ctx.addIssue({ ...err, path: err.path }))
-    }
-    switch (data.country) {
-      case 'USA':
-        const usaResult = usaAddressValidation.safeParse(data)
-        if (!usaResult.success) addIssues(usaResult.error.errors)
-        break
-      case 'Canada':
-        const canadaResult = canadaAddressValidation.safeParse(data)
-        if (!canadaResult.success) addIssues(canadaResult.error.errors)
-        break
-      case 'UK':
-        const ukResult = ukAddressValidation.safeParse(data)
-        if (!ukResult.success) addIssues(ukResult.error.errors)
-        break
-      default:
-        if (data.country) {
-          // Only apply generic validation if a country is selected
-          const genericResult = genericAddressValidation.safeParse(data)
-          if (!genericResult.success) addIssues(genericResult.error.errors)
+// --- Discriminated Union for Address ---
+export const addressSchema = z.discriminatedUnion(
+  'country',
+  [usaAddressSchema, canadaAddressSchema, ukAddressSchema, otherCountrySchema],
+  {
+    errorMap: (issue, ctx) => {
+      if (issue.code === 'invalid_union_discriminator') {
+        return {
+          message: 'Please select a valid country to see address fields.',
         }
-        break
-    }
-  })
+      }
+      return { message: ctx.defaultError }
+    },
+  }
+)
 
 export type AddressFormData = z.infer<typeof addressSchema>
 
@@ -137,18 +123,6 @@ export const getNewAddressDefaultValues = (): AddressFormData => ({
   usaCity: '',
   usaState: '',
   usaZipCode: '',
-  canadaStreetAddress: '',
-  canadaCity: '',
-  canadaProvince: '',
-  canadaPostalCode: '',
-  ukStreetAddress: '',
-  ukTownCity: '',
-  ukCounty: '',
-  ukPostcode: '',
-  addressLine1: '',
-  cityOrTown: '',
-  stateOrProvinceOrRegion: '',
-  postalOrZipCode: '',
 })
 
 export const defaultUserProfileValues: UserProfileFormData = {

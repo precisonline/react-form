@@ -37,25 +37,27 @@ const GlassBackdrop = styled('div')({
   padding: '16px',
 })
 
-const GlassModal = styled(Paper)<{ expanded?: boolean }>(({ expanded }) => ({
-  backgroundColor: 'rgba(255, 255, 255, 0.7)',
-  backdropFilter: 'blur(24px)',
-  borderRadius: '16px',
-  border: '1px solid rgba(255, 255, 255, 0.3)',
-  boxShadow: `
+const GlassModal = styled(Paper)<{ 'data-expanded'?: boolean }>(
+  ({ 'data-expanded': expanded }) => ({
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    backdropFilter: 'blur(24px)',
+    borderRadius: '16px',
+    border: '1px solid rgba(255, 255, 255, 0.3)',
+    boxShadow: `
     0 25px 50px rgba(0, 0, 0, 0.15),
     0 0 0 1px rgba(255, 255, 255, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.3)
   `,
-  outline: 'none',
-  transformOrigin: 'center center',
-  width: expanded ? '800px' : '128px',
-  height: expanded ? '384px' : '48px',
-  maxWidth: expanded ? '90vw' : '128px',
-  transform: expanded ? 'scale(1)' : 'scale(0.95)',
-  opacity: expanded ? 1 : 0,
-  transition: 'all 0.2s ease-out',
-}))
+    outline: 'none',
+    transformOrigin: 'center center',
+    width: expanded ? '800px' : '128px',
+    height: expanded ? '384px' : '48px',
+    maxWidth: expanded ? '90vw' : '128px',
+    transform: expanded ? 'scale(1)' : 'scale(0.95)',
+    opacity: expanded ? 1 : 0,
+    transition: 'all 0.2s ease-out',
+  })
+)
 
 const FloatingOrb = styled('div')<{ index: number }>(({ index }) => ({
   position: 'absolute',
@@ -128,7 +130,7 @@ const CleanMorphingModal = () => {
           <FloatingOrb key={i} index={i} />
         ))}
 
-        <GlassModal expanded={isExpanded}>
+        <GlassModal data-expanded={isExpanded}>
           {isExpanded && (
             <Box
               sx={{

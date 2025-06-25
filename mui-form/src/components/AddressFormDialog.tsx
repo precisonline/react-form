@@ -68,41 +68,45 @@ export default function AddressFormDialog({
             <TextField
               {...register('usaStreetAddress')}
               label='Street Address'
-              error={!!errors.usaStreetAddress}
-              helperText={errors.usaStreetAddress?.message}
+              error={!!(errors as any).usaStreetAddress}
+              helperText={(errors as any).usaStreetAddress?.message}
               fullWidth
               required
+              data-testid='usaStreetAddress'
             />
             <TextField
               {...register('addressLine2')}
               label='Apt, Suite, Bldg (Optional)'
-              error={!!errors.addressLine2}
-              helperText={errors.addressLine2?.message}
+              error={!!(errors as any).addressLine2}
+              helperText={(errors as any).addressLine2?.message}
               fullWidth
             />
             <TextField
               {...register('usaCity')}
               label='City'
-              error={!!errors.usaCity}
-              helperText={errors.usaCity?.message}
+              error={!!(errors as any).usaCity}
+              helperText={(errors as any).usaCity?.message}
               fullWidth
               required
+              data-testid='usaCity'
             />
             <TextField
               {...register('usaState')}
               label='State'
-              error={!!errors.usaState}
-              helperText={errors.usaState?.message}
+              error={!!(errors as any).usaState}
+              helperText={(errors as any).usaState?.message}
               fullWidth
               required
+              data-testid='usaState'
             />
             <TextField
               {...register('usaZipCode')}
               label='ZIP Code'
-              error={!!errors.usaZipCode}
-              helperText={errors.usaZipCode?.message}
+              error={!!(errors as any).usaZipCode}
+              helperText={(errors as any).usaZipCode?.message}
               fullWidth
               required
+              data-testid='usaZipCode'
             />
           </>
         )
@@ -112,41 +116,45 @@ export default function AddressFormDialog({
             <TextField
               {...register('canadaStreetAddress')}
               label='Street Address'
-              error={!!errors.canadaStreetAddress}
-              helperText={errors.canadaStreetAddress?.message}
+              error={!!(errors as any).canadaStreetAddress}
+              helperText={(errors as any).canadaStreetAddress?.message}
               fullWidth
               required
+              data-testid='canadaStreetAddress'
             />
             <TextField
               {...register('addressLine2')}
               label='Apt, Suite, Bldg (Optional)'
-              error={!!errors.addressLine2}
-              helperText={errors.addressLine2?.message}
+              error={!!(errors as any).addressLine2}
+              helperText={(errors as any).addressLine2?.message}
               fullWidth
             />
             <TextField
               {...register('canadaCity')}
               label='City'
-              error={!!errors.canadaCity}
-              helperText={errors.canadaCity?.message}
+              error={!!(errors as any).canadaCity}
+              helperText={(errors as any).canadaCity?.message}
               fullWidth
               required
+              data-testid='canadaCity'
             />
             <TextField
               {...register('canadaProvince')}
               label='Province'
-              error={!!errors.canadaProvince}
-              helperText={errors.canadaProvince?.message}
+              error={!!(errors as any).canadaProvince}
+              helperText={(errors as any).canadaProvince?.message}
               fullWidth
               required
+              data-testid='canadaProvince'
             />
             <TextField
               {...register('canadaPostalCode')}
               label='Postal Code'
-              error={!!errors.canadaPostalCode}
-              helperText={errors.canadaPostalCode?.message}
+              error={!!(errors as any).canadaPostalCode}
+              helperText={(errors as any).canadaPostalCode?.message}
               fullWidth
               required
+              data-testid='canadaPostalCode'
             />
           </>
         )
@@ -156,40 +164,43 @@ export default function AddressFormDialog({
             <TextField
               {...register('ukStreetAddress')}
               label='Street Address'
-              error={!!errors.ukStreetAddress}
-              helperText={errors.ukStreetAddress?.message}
+              error={!!(errors as any).ukStreetAddress}
+              helperText={(errors as any).ukStreetAddress?.message}
               fullWidth
               required
+              data-testid='ukStreetAddress'
             />
             <TextField
               {...register('addressLine2')}
               label='Flat, Apt, etc. (Optional)'
-              error={!!errors.addressLine2}
-              helperText={errors.addressLine2?.message}
+              error={!!(errors as any).addressLine2}
+              helperText={(errors as any).addressLine2?.message}
               fullWidth
             />
             <TextField
               {...register('ukTownCity')}
               label='Town/City'
-              error={!!errors.ukTownCity}
-              helperText={errors.ukTownCity?.message}
+              error={!!(errors as any).ukTownCity}
+              helperText={(errors as any).ukTownCity?.message}
               fullWidth
               required
+              data-testid='ukTownCity'
             />
             <TextField
               {...register('ukCounty')}
               label='County (Optional)'
-              error={!!errors.ukCounty}
-              helperText={errors.ukCounty?.message}
+              error={!!(errors as any).ukCounty}
+              helperText={(errors as any).ukCounty?.message}
               fullWidth
             />
             <TextField
               {...register('ukPostcode')}
               label='Postcode'
-              error={!!errors.ukPostcode}
-              helperText={errors.ukPostcode?.message}
+              error={!!(errors as any).ukPostcode}
+              helperText={(errors as any).ukPostcode?.message}
               fullWidth
               required
+              data-testid='ukPostcode'
             />
           </>
         )
@@ -202,38 +213,40 @@ export default function AddressFormDialog({
             <TextField
               {...register('addressLine1')}
               label='Address Line 1'
-              error={!!errors.addressLine1}
-              helperText={errors.addressLine1?.message}
+              error={!!(errors as any).addressLine1}
+              helperText={(errors as any).addressLine1?.message}
               fullWidth
               required
+              data-testid='addressLine1'
             />
             <TextField
               {...register('addressLine2')}
               label='Address Line 2 (Optional)'
-              error={!!errors.addressLine2}
-              helperText={errors.addressLine2?.message}
+              error={!!(errors as any).addressLine2}
+              helperText={(errors as any).addressLine2?.message}
               fullWidth
             />
             <TextField
               {...register('cityOrTown')}
               label='City / Town'
-              error={!!errors.cityOrTown}
-              helperText={errors.cityOrTown?.message}
+              error={!!(errors as any).cityOrTown}
+              helperText={(errors as any).cityOrTown?.message}
               fullWidth
               required
+              data-testid='cityOrTown'
             />
             <TextField
               {...register('stateOrProvinceOrRegion')}
               label='State / Province / Region (Optional)'
-              error={!!errors.stateOrProvinceOrRegion}
-              helperText={errors.stateOrProvinceOrRegion?.message}
+              error={!!(errors as any).stateOrProvinceOrRegion}
+              helperText={(errors as any).stateOrProvinceOrRegion?.message}
               fullWidth
             />
             <TextField
               {...register('postalOrZipCode')}
               label='Postal / ZIP Code (Optional)'
-              error={!!errors.postalOrZipCode}
-              helperText={errors.postalOrZipCode?.message}
+              error={!!(errors as any).postalOrZipCode}
+              helperText={(errors as any).postalOrZipCode?.message}
               fullWidth
             />
           </>
@@ -255,7 +268,11 @@ export default function AddressFormDialog({
                 name='addressType'
                 control={control}
                 render={({ field }) => (
-                  <Select {...field} label='Address Type'>
+                  <Select
+                    {...field}
+                    label='Address Type'
+                    data-testid='addressType'
+                  >
                     {addressTypes.map((type) => (
                       <MenuItem key={type} value={type}>
                         {type}
@@ -274,7 +291,12 @@ export default function AddressFormDialog({
                 name='country'
                 control={control}
                 render={({ field }) => (
-                  <Select {...field} label='Country' value={field.value || ''}>
+                  <Select
+                    {...field}
+                    label='Country'
+                    value={field.value || ''}
+                    data-testid='country'
+                  >
                     <MenuItem value=''>
                       <em>Select a country...</em>
                     </MenuItem>
