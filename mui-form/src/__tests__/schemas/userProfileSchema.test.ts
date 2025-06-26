@@ -1,195 +1,250 @@
+import { z } from 'zod'
 import {
   userProfileSchema,
-  addressSchema,
-  getNewAddressDefaultValues,
-  defaultUserProfileValues,
   UserProfileFormData,
+  defaultUserProfileValues,
 } from '../../schemas/userProfileSchema'
+import { addressSchema, AddressFormData } from '../../schemas/addressSchema'
+import { contactSchema, ContactFormData } from '../../schemas/contactSchema'
 
-// Mock the uuidv4 function to return a predictable value
-jest.mock('uuid', () => ({
-  v4: () => 'a-real-uuid-v4-for-testing',
-}))
-
-describe('Form Schemas and Default Values', () => {
-  // Test Suite for defaultUserProfileValues
-  describe('defaultUserProfileValues', () => {
-    it('should match the expected structure and default values', () => {
-      expect(defaultUserProfileValues).toEqual({
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
-        deliveryInstructions: '',
-        newsletter: false,
-        addresses: [],
-      })
-    })
-  })
-
-  // Test Suite for getNewAddressDefaultValues
-  describe('getNewAddressDefaultValues', () => {
-    it('should return a new address object with a unique ID and default values for USA', () => {
-      const newAddress = getNewAddressDefaultValues()
-      expect(newAddress).toEqual({
-        id: 'a-real-uuid-v4-for-testing',
-        addressType: 'Home',
-        country: 'USA',
-        addressLine2: '',
-        usaStreetAddress: '',
-        usaCity: '',
-        usaState: '',
-        usaZipCode: '',
-      })
-    })
-  })
-
-  // Test Suite for userProfileSchema
-  describe('userProfileSchema', () => {
-    it('should validate a correct user profile object', () => {
-      const validProfile: UserProfileFormData = {
+describe('User Profile Schema Validation', () => {
+  // Test valid user profile data
+  const validUserProfiles: UserProfileFormData[] = [
+    {
+      contact: {
         firstName: 'John',
         lastName: 'Doe',
         email: 'john.doe@example.com',
         phone: '1234567890',
-        deliveryInstructions: 'Leave at the front door',
-        newsletter: true,
-        addresses: [],
-      }
-      const result = userProfileSchema.safeParse(validProfile)
-      expect(result.success).toBe(true)
-    })
+      },
+      newsletter: true,
+      addresses: [
+        {
+          addressType: 'Home',
+          country: 'USA',
+          usaStreetAddress: '123 Main St',
+          usaCity: 'Denver',
+          usaState: 'CO',
+          usaZipCode: '80202',
+        },
+      ],
+    },
+    {
+      contact: {
+        firstName: 'Jane',
+        lastName: 'Smith',
+        email: 'jane.smith@example.com',
+        phone: '0987654321',
+      },
+      newsletter: false,
+      addresses: [],
+    },
+  ]
 
-    it('should fail validation for an invalid user profile object', () => {
-      const invalidProfile = {
-        firstName: 'J', // Too short
-        lastName: '', // Too short
+  // Test invalid user profile data
+  const invalidUserProfiles: Partial<UserProfileFormData>[] = [
+    // Missing required contact information
+    {
+      contact: {
+        firstName: '',
+        lastName: '',
+        email: 'invalid-email',
+        phone: '123',
+      },
+    },
+    // Invalid address
+    {
+      contact: {
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john.doe@example.com',
+        phone: '1234567890',
+      },
+      addresses: [
+        {
+          addressType: 'Home',
+          country: 'USA',
+          usaStreetAddress: '',
+          usaCity: '',
+          usaState: '',
+          usaZipCode: '',
+        },
+      ],
+    },
+  ]
+
+  // More complex invalid scenarios
+  const moreInvalidProfiles: Partial<UserProfileFormData>[] = [
+    // Overflow address array
+    {
+      contact: {
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john.doe@example.com',
+        phone: '1234567890',
+      },
+      addresses: [
+        {
+          addressType: 'Home',
+          country: 'USA',
+          usaStreetAddress: '',
+          usaCity: '',
+          usaState: '',
+          usaZipCode: '',
+        },
+      ],
+    },
+    // Malformed contact information
+    {
+      contact: {
+        firstName: 'A', // Too short
+        lastName: 'B', // Too short
         email: 'not-an-email',
-        phone: '123', // Too short
-        addresses: [],
-      }
-      const result = userProfileSchema.safeParse(invalidProfile)
-      expect(result.success).toBe(false)
-      expect(result.error?.errors).toHaveLength(4)
+        phone: 'invalid-phone',
+      },
+    },
+  ]
+
+  // Helper function to log validation errors
+  const logValidationErrors = (
+    result: z.SafeParseReturnType<UserProfileFormData, UserProfileFormData>
+  ) => {
+    if (!result.success) {
+      console.error('Validation Errors:', result.error.errors)
+    }
+  }
+
+  // Validate correct user profile structures
+  describe('Valid User Profile Validation', () => {
+    validUserProfiles.forEach((profileData, index) => {
+      it(`should validate user profile (Case ${index + 1})`, () => {
+        const result = userProfileSchema.safeParse(profileData)
+        logValidationErrors(result)
+        expect(result.success).toBe(true)
+      })
     })
   })
 
-  // Test Suite for addressSchema with discriminated union
-  describe('addressSchema discriminated union', () => {
-    const testUUID = 'f47ac10b-58cc-4372-a567-0e02b2c3d479'
+  // Validate incorrect user profile structures
+  describe('Invalid User Profile Validation', () => {
+    // Combine both sets of invalid profiles
+    const allInvalidProfiles = [...invalidUserProfiles, ...moreInvalidProfiles]
 
-    // Test for USA addresses
-    describe('USA Address Validation', () => {
-      it('should validate a correct USA address', () => {
-        const validUsaAddress = {
-          id: testUUID,
-          addressType: 'Shipping',
-          country: 'USA',
-          usaStreetAddress: '123 Main St',
-          usaCity: 'Anytown',
-          usaState: 'CA',
-          usaZipCode: '12345',
-        }
-        const result = addressSchema.safeParse(validUsaAddress)
-        expect(result.success).toBe(true)
-      })
-
-      it('should fail validation for an incomplete USA address', () => {
-        const invalidUsaAddress = {
-          id: testUUID,
-          addressType: 'Billing',
-          country: 'USA',
-          usaStreetAddress: '', // Missing required field
-        }
-        const result = addressSchema.safeParse(invalidUsaAddress)
+    allInvalidProfiles.forEach((profileData, index) => {
+      it(`should fail validation for invalid profile (Case ${
+        index + 1
+      })`, () => {
+        const result = userProfileSchema.safeParse(profileData)
         expect(result.success).toBe(false)
       })
     })
+  })
 
-    // Test for Canada addresses
-    describe('Canada Address Validation', () => {
-      it('should validate a correct Canada address', () => {
-        const validCanadaAddress = {
-          id: testUUID,
+  // Test default values
+  describe('Default Values', () => {
+    it('should have correct default user profile values', () => {
+      const defaultProfile = defaultUserProfileValues
+
+      expect(defaultProfile.contact.firstName).toBe('')
+      expect(defaultProfile.contact.lastName).toBe('')
+      expect(defaultProfile.contact.email).toBe('')
+      expect(defaultProfile.contact.phone).toBe('')
+      expect(defaultProfile.newsletter).toBe(false)
+      expect(defaultProfile.addresses).toEqual([])
+    })
+
+    it('should validate against schema with default values', () => {
+      const result = userProfileSchema.safeParse(defaultUserProfileValues)
+      expect(result.success).toBe(true)
+    })
+  })
+
+  // Nested schema validation
+  describe('Nested Schema Validation', () => {
+    it('should validate contact sub-schema', () => {
+      const validContact: ContactFormData = {
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john.doe@example.com',
+        phone: '1234567890',
+      }
+
+      const result = contactSchema.safeParse(validContact)
+      expect(result.success).toBe(true)
+    })
+
+    it('should validate address sub-schema', () => {
+      const validAddress: AddressFormData = {
+        addressType: 'Home',
+        country: 'USA',
+        usaStreetAddress: '123 Main St',
+        usaCity: 'Denver',
+        usaState: 'CO',
+        usaZipCode: '80202',
+      }
+
+      const result = addressSchema.safeParse(validAddress)
+      expect(result.success).toBe(true)
+    })
+  })
+
+  // Performance and edge case testing
+  describe('Performance and Edge Cases', () => {
+    it('should handle large number of addresses', () => {
+      const largeProfileWithManyAddresses: UserProfileFormData = {
+        contact: {
+          firstName: 'John',
+          lastName: 'Doe',
+          email: 'john.doe@example.com',
+          phone: '1234567890',
+        },
+        newsletter: true,
+        addresses: Array.from({ length: 10 }, (_, i) => ({
           addressType: 'Home',
-          country: 'Canada',
-          canadaStreetAddress: '456 Maple Ave',
-          canadaCity: 'Toronto',
-          canadaProvince: 'ON',
-          canadaPostalCode: 'M5H 2N2',
-        }
-        const result = addressSchema.safeParse(validCanadaAddress)
-        expect(result.success).toBe(true)
-      })
+          country: 'USA',
+          usaStreetAddress: `${i + 1} Main St`,
+          usaCity: 'Denver',
+          usaState: 'CO',
+          usaZipCode: '80202',
+        })),
+      }
 
-      it('should fail validation for an invalid Canadian postal code', () => {
-        const invalidCanadaAddress = {
-          id: testUUID,
-          addressType: 'Shipping',
-          country: 'Canada',
-          canadaStreetAddress: '789 Oak Rd',
-          canadaCity: 'Vancouver',
-          canadaProvince: 'BC',
-          canadaPostalCode: '123 456', // Invalid format
-        }
-        const result = addressSchema.safeParse(invalidCanadaAddress)
-        expect(result.success).toBe(false)
-      })
+      const result = userProfileSchema.safeParse(largeProfileWithManyAddresses)
+      expect(result.success).toBe(true)
     })
 
-    // Test for UK addresses
-    describe('UK Address Validation', () => {
-      it('should validate a correct UK address', () => {
-        const validUkAddress = {
-          id: testUUID,
-          addressType: 'Billing',
-          country: 'UK',
-          ukStreetAddress: '10 Downing Street',
-          ukTownCity: 'London',
-          ukPostcode: 'SW1A 2AA',
-        }
-        const result = addressSchema.safeParse(validUkAddress)
-        expect(result.success).toBe(true)
-      })
+    it('should handle empty optional fields', () => {
+      const profileWithOptionalFields: UserProfileFormData = {
+        contact: {
+          firstName: 'Jane',
+          lastName: 'Doe',
+          email: 'jane.doe@example.com',
+          phone: '0987654321',
+        },
+        newsletter: false,
+        // No addresses
+      }
 
-      it('should fail validation for an incomplete UK address', () => {
-        const incompleteUkAddress = {
-          id: testUUID,
-          addressType: 'Home',
-          country: 'UK',
-          ukStreetAddress: '10 Downing Street',
-          // Missing town/city and postcode
-        }
-        const result = addressSchema.safeParse(incompleteUkAddress)
-        expect(result.success).toBe(false)
-      })
+      const result = userProfileSchema.safeParse(profileWithOptionalFields)
+      expect(result.success).toBe(true)
     })
+  })
 
-    // Test for "Other" countries
-    describe('Other Country Address Validation', () => {
-      it('should validate a correct address for Germany', () => {
-        const validGenericAddress = {
-          id: testUUID,
-          addressType: 'Other',
-          country: 'Germany',
-          addressLine1: 'Musterstraße 1',
-          cityOrTown: 'Berlin',
-          postalOrZipCode: '10115',
-        }
-        const result = addressSchema.safeParse(validGenericAddress)
-        expect(result.success).toBe(true)
-      })
+  // Optional: Cross-field validation examples
+  describe('Advanced Validation Scenarios', () => {
+    it('should ensure contact information is complete', () => {
+      const incompleteContact: UserProfileFormData = {
+        contact: {
+          firstName: '', // Missing
+          lastName: 'Doe',
+          email: 'jane.doe@example.com',
+          phone: '', // Missing
+        },
+        newsletter: false,
+      }
 
-      it('should fail validation for an incomplete address for France', () => {
-        const incompleteGenericAddress = {
-          id: testUUID,
-          addressType: 'Other',
-          country: 'France',
-          // Missing address line 1
-        }
-        const result = addressSchema.safeParse(incompleteGenericAddress)
-        expect(result.success).toBe(false)
-      })
+      const result = userProfileSchema.safeParse(incompleteContact)
+      expect(result.success).toBe(false)
     })
   })
 })

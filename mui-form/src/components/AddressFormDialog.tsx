@@ -1,323 +1,183 @@
 'use client'
-import React, { useEffect } from 'react'
-import { useForm, Controller, SubmitHandler } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import React from 'react'
 import {
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   Button,
-  Stack,
   TextField,
-  FormControl,
-  InputLabel,
   Select,
   MenuItem,
-  FormHelperText,
-  Typography,
+  FormControl,
+  InputLabel,
 } from '@mui/material'
 import {
-  addressSchema,
-  AddressFormData,
-  countries,
-  addressTypes,
-  getNewAddressDefaultValues,
-} from '../schemas/userProfileSchema'
-import { AddressFormDialogProps } from '../types/form'
+  Control,
+  Controller,
+  FieldErrors,
+  UseFormHandleSubmit,
+  useWatch,
+} from 'react-hook-form'
+import { Address } from '../schemas/addressSchema'
+import { ENUMS } from '../schemas/common'
+
+interface AddressFormDialogProps {
+  open: boolean
+  onClose: () => void
+  control: Control<{ addresses: Address[] }>
+  errors: FieldErrors<{ addresses: Address[] }>
+  handleSubmit: UseFormHandleSubmit<{ addresses: Address[] }>
+}
 
 export default function AddressFormDialog({
   open,
   onClose,
-  onSave,
-  initialData,
+  control,
+  errors,
+  handleSubmit,
 }: AddressFormDialogProps) {
-  const isEditing = !!initialData
-
-  const {
-    register,
-    handleSubmit,
-    watch,
+  // Use useWatch to get the current country value
+  const selectedCountry = useWatch({
     control,
-    reset,
-    formState: { errors, isValid },
-  } = useForm<AddressFormData>({
-    resolver: zodResolver(addressSchema),
-    mode: 'onChange',
+    name: 'addresses.0.country',
   })
 
-  const selectedCountry = watch('country')
-
-  useEffect(() => {
-    if (open) {
-      reset(initialData || getNewAddressDefaultValues())
-    }
-  }, [open, initialData, reset])
-
-  const onSubmit: SubmitHandler<AddressFormData> = (data) => {
-    onSave(data)
-    onClose()
-  }
-
-  const renderAddressFields = () => {
-    if (!selectedCountry) return null
-    switch (selectedCountry) {
-      case 'USA':
-        return (
-          <>
-            <TextField
-              {...register('usaStreetAddress')}
-              label='Street Address'
-              error={!!(errors as any).usaStreetAddress}
-              helperText={(errors as any).usaStreetAddress?.message}
-              fullWidth
-              required
-              data-testid='usaStreetAddress'
-            />
-            <TextField
-              {...register('addressLine2')}
-              label='Apt, Suite, Bldg (Optional)'
-              error={!!(errors as any).addressLine2}
-              helperText={(errors as any).addressLine2?.message}
-              fullWidth
-            />
-            <TextField
-              {...register('usaCity')}
-              label='City'
-              error={!!(errors as any).usaCity}
-              helperText={(errors as any).usaCity?.message}
-              fullWidth
-              required
-              data-testid='usaCity'
-            />
-            <TextField
-              {...register('usaState')}
-              label='State'
-              error={!!(errors as any).usaState}
-              helperText={(errors as any).usaState?.message}
-              fullWidth
-              required
-              data-testid='usaState'
-            />
-            <TextField
-              {...register('usaZipCode')}
-              label='ZIP Code'
-              error={!!(errors as any).usaZipCode}
-              helperText={(errors as any).usaZipCode?.message}
-              fullWidth
-              required
-              data-testid='usaZipCode'
-            />
-          </>
-        )
-      case 'Canada':
-        return (
-          <>
-            <TextField
-              {...register('canadaStreetAddress')}
-              label='Street Address'
-              error={!!(errors as any).canadaStreetAddress}
-              helperText={(errors as any).canadaStreetAddress?.message}
-              fullWidth
-              required
-              data-testid='canadaStreetAddress'
-            />
-            <TextField
-              {...register('addressLine2')}
-              label='Apt, Suite, Bldg (Optional)'
-              error={!!(errors as any).addressLine2}
-              helperText={(errors as any).addressLine2?.message}
-              fullWidth
-            />
-            <TextField
-              {...register('canadaCity')}
-              label='City'
-              error={!!(errors as any).canadaCity}
-              helperText={(errors as any).canadaCity?.message}
-              fullWidth
-              required
-              data-testid='canadaCity'
-            />
-            <TextField
-              {...register('canadaProvince')}
-              label='Province'
-              error={!!(errors as any).canadaProvince}
-              helperText={(errors as any).canadaProvince?.message}
-              fullWidth
-              required
-              data-testid='canadaProvince'
-            />
-            <TextField
-              {...register('canadaPostalCode')}
-              label='Postal Code'
-              error={!!(errors as any).canadaPostalCode}
-              helperText={(errors as any).canadaPostalCode?.message}
-              fullWidth
-              required
-              data-testid='canadaPostalCode'
-            />
-          </>
-        )
-      case 'UK':
-        return (
-          <>
-            <TextField
-              {...register('ukStreetAddress')}
-              label='Street Address'
-              error={!!(errors as any).ukStreetAddress}
-              helperText={(errors as any).ukStreetAddress?.message}
-              fullWidth
-              required
-              data-testid='ukStreetAddress'
-            />
-            <TextField
-              {...register('addressLine2')}
-              label='Flat, Apt, etc. (Optional)'
-              error={!!(errors as any).addressLine2}
-              helperText={(errors as any).addressLine2?.message}
-              fullWidth
-            />
-            <TextField
-              {...register('ukTownCity')}
-              label='Town/City'
-              error={!!(errors as any).ukTownCity}
-              helperText={(errors as any).ukTownCity?.message}
-              fullWidth
-              required
-              data-testid='ukTownCity'
-            />
-            <TextField
-              {...register('ukCounty')}
-              label='County (Optional)'
-              error={!!(errors as any).ukCounty}
-              helperText={(errors as any).ukCounty?.message}
-              fullWidth
-            />
-            <TextField
-              {...register('ukPostcode')}
-              label='Postcode'
-              error={!!(errors as any).ukPostcode}
-              helperText={(errors as any).ukPostcode?.message}
-              fullWidth
-              required
-              data-testid='ukPostcode'
-            />
-          </>
-        )
-      default:
-        return (
-          <>
-            <Typography variant='body2' sx={{ color: 'text.secondary' }}>
-              Please provide address details for {selectedCountry}.
-            </Typography>
-            <TextField
-              {...register('addressLine1')}
-              label='Address Line 1'
-              error={!!(errors as any).addressLine1}
-              helperText={(errors as any).addressLine1?.message}
-              fullWidth
-              required
-              data-testid='addressLine1'
-            />
-            <TextField
-              {...register('addressLine2')}
-              label='Address Line 2 (Optional)'
-              error={!!(errors as any).addressLine2}
-              helperText={(errors as any).addressLine2?.message}
-              fullWidth
-            />
-            <TextField
-              {...register('cityOrTown')}
-              label='City / Town'
-              error={!!(errors as any).cityOrTown}
-              helperText={(errors as any).cityOrTown?.message}
-              fullWidth
-              required
-              data-testid='cityOrTown'
-            />
-            <TextField
-              {...register('stateOrProvinceOrRegion')}
-              label='State / Province / Region (Optional)'
-              error={!!(errors as any).stateOrProvinceOrRegion}
-              helperText={(errors as any).stateOrProvinceOrRegion?.message}
-              fullWidth
-            />
-            <TextField
-              {...register('postalOrZipCode')}
-              label='Postal / ZIP Code (Optional)'
-              error={!!(errors as any).postalOrZipCode}
-              helperText={(errors as any).postalOrZipCode?.message}
-              fullWidth
-            />
-          </>
-        )
-    }
+  const addressFields = {
+    USA: [
+      {
+        name: 'streetAddress',
+        label: 'Street Address',
+        required: true,
+      },
+      {
+        name: 'city',
+        label: 'City',
+        required: true,
+      },
+      {
+        name: 'state',
+        label: 'State',
+        required: true,
+      },
+      {
+        name: 'zipCode',
+        label: 'ZIP Code',
+        required: true,
+      },
+    ],
+    Canada: [
+      {
+        name: 'streetAddress',
+        label: 'Street Address',
+        required: true,
+      },
+      {
+        name: 'city',
+        label: 'City',
+        required: true,
+      },
+      {
+        name: 'province',
+        label: 'Province',
+        required: true,
+      },
+      {
+        name: 'postalCode',
+        label: 'Postal Code',
+        required: true,
+      },
+    ],
   }
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth='sm' fullWidth>
-      <DialogTitle>
-        {isEditing ? 'Edit Address' : 'Add New Address'}
-      </DialogTitle>
-      <form onSubmit={handleSubmit(onSubmit)}>
+    <Dialog open={open} onClose={onClose} maxWidth='md' fullWidth>
+      <DialogTitle>Address Details</DialogTitle>
+      <form
+        onSubmit={handleSubmit((data) => {
+          console.log(data)
+          onClose()
+        })}
+      >
         <DialogContent>
-          <Stack spacing={3} sx={{ mt: 1 }}>
-            <FormControl fullWidth required error={!!errors.addressType}>
-              <InputLabel>Address Type</InputLabel>
-              <Controller
-                name='addressType'
-                control={control}
-                render={({ field }) => (
-                  <Select
-                    {...field}
-                    label='Address Type'
-                    data-testid='addressType'
-                  >
-                    {addressTypes.map((type) => (
-                      <MenuItem key={type} value={type}>
-                        {type}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                )}
-              />
-              {errors.addressType && (
-                <FormHelperText>{errors.addressType.message}</FormHelperText>
-              )}
-            </FormControl>
-            <FormControl fullWidth required error={!!errors.country}>
-              <InputLabel>Country</InputLabel>
-              <Controller
-                name='country'
-                control={control}
-                render={({ field }) => (
-                  <Select
-                    {...field}
-                    label='Country'
-                    value={field.value || ''}
-                    data-testid='country'
-                  >
-                    <MenuItem value=''>
-                      <em>Select a country...</em>
+          {/* Address Type Selection */}
+          <Controller
+            name='addresses.0.addressType'
+            control={control}
+            render={({ field }) => (
+              <FormControl fullWidth margin='normal'>
+                <InputLabel>Address Type</InputLabel>
+                <Select
+                  {...field}
+                  label='Address Type'
+                  error={!!errors.addresses?.[0]?.addressType}
+                >
+                  {ENUMS.addressTypes.map((type) => (
+                    <MenuItem key={type} value={type}>
+                      {type}
                     </MenuItem>
-                    {countries.map((c) => (
-                      <MenuItem key={c} value={c}>
-                        {c}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                )}
-              />
-              {errors.country && (
-                <FormHelperText>{errors.country.message}</FormHelperText>
-              )}
-            </FormControl>
-            {renderAddressFields()}
-          </Stack>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
+          />
+
+          {/* Country Selection */}
+          <Controller
+            name='addresses.0.country'
+            control={control}
+            render={({ field }) => (
+              <FormControl fullWidth margin='normal'>
+                <InputLabel>Country</InputLabel>
+                <Select
+                  {...field}
+                  label='Country'
+                  error={!!errors.addresses?.[0]?.country}
+                >
+                  {ENUMS.countries.map((country) => (
+                    <MenuItem key={country} value={country}>
+                      {country}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
+          />
+
+          {/* Dynamically render address fields based on selected country */}
+          {selectedCountry &&
+            addressFields[selectedCountry as keyof typeof addressFields]?.map(
+              (addressField) => (
+                <Controller
+                  key={addressField.name}
+                  name={`addresses.0.${addressField.name}` as const}
+                  control={control}
+                  render={({ field: inputField }) => (
+                    <TextField
+                      {...inputField}
+                      margin='normal'
+                      label={addressField.label}
+                      required={addressField.required}
+                      fullWidth
+                      error={
+                        !!errors.addresses?.[0]?.[
+                          addressField.name as keyof Address
+                        ]
+                      }
+                      helperText={
+                        errors.addresses?.[0]?.[
+                          addressField.name as keyof Address
+                        ]?.message
+                      }
+                    />
+                  )}
+                />
+              )
+            )}
         </DialogContent>
-        <DialogActions sx={{ p: '16px 24px' }}>
+        <DialogActions>
           <Button onClick={onClose}>Cancel</Button>
-          <Button type='submit' variant='contained' disabled={!isValid}>
+          <Button type='submit' variant='contained'>
             Save Address
           </Button>
         </DialogActions>
