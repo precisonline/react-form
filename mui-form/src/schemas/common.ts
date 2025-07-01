@@ -6,6 +6,7 @@ export const VALIDATION = {
   zipCode: {
     usa: /^\d{5}(-\d{4})?$/,
     canada: /^[A-Z]\d[A-Z] \d[A-Z]\d$/,
+    uk: /^([A-Z]{1,2}\d[A-Z\d]? ?\d[A-Z]{2})$/,
   },
 } as const
 

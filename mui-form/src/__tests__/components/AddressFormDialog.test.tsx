@@ -1,105 +1,135 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import React from 'react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { ThemeProvider, createTheme } from '@mui/material/styles'
 import AddressFormDialog from '../../components/AddressFormDialog'
-import { addressSchema, AddressFormData } from '../../schemas/addressSchema'
-import { SafeParseReturnType } from 'zod'
+import ThemeProvider from '../../components/ThemeProvider'
+import { Address } from '../../schemas/addressSchema'
+import TextField from '@mui/material/TextField'
 
-jest.mock('../../schemas/addressSchema', () => ({
-  ...jest.requireActual('../../schemas/addressSchema'),
-  countries: ['USA', 'Canada', 'UK'],
-  addressTypes: ['Home', 'Work', 'Shipping', 'Billing', 'Other'],
-}))
+const mockOnSave = jest.fn()
+const mockOnClose = jest.fn()
 
-// We will build our mock data precisely for each test case
-const mockEditAddress: AddressFormData = {
-  id: 'abc-123',
-  addressType: 'Work',
-  country: 'USA',
-  usaStreetAddress: '123 Main St',
-  usaCity: 'Denver',
-  usaState: 'CO',
-  usaZipCode: '80202',
+const setup = (initialData: Address | null = null) => {
+  const user = userEvent.setup()
+  render(
+    <ThemeProvider>
+      <AddressFormDialog
+        open={true}
+        onClose={mockOnClose}
+        onSave={mockOnSave}
+        initialData={initialData}
+      />
+    </ThemeProvider>
+  )
+  return { user }
 }
 
-const renderComponent = (props = {}) => {
-  const defaultProps = {
-    open: true,
-    onClose: jest.fn(),
-    onSave: jest.fn(),
-    initialData: null,
-  }
-  const finalProps = { ...defaultProps, ...props }
-  const theme = createTheme()
-
-  return {
-    ...render(
-      <ThemeProvider theme={theme}>
-        <AddressFormDialog {...finalProps} />
-      </ThemeProvider>
-    ),
-    ...finalProps,
-  }
-}
-
-// Validation helper
-const logValidationErrors = (result: SafeParseReturnType<unknown, unknown>) => {
-  if (!result.success) {
-    console.error('Validation Errors:', result.error.errors)
-  }
-}
-
-describe('Address Schema Validation', () => {
-  it('should validate USA address', () => {
-    const result = addressSchema.safeParse(mockEditAddress)
-    logValidationErrors(result)
-    expect(result.success).toBe(true)
+describe('AddressFormDialog', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
   })
 
-  describe('Form Rendering', () => {
-    it('should render populated USA fields in edit mode', () => {
-      const { getByLabelText } = renderComponent({
-        initialData: mockEditAddress,
+  test('renders basic MUI TextField (verify MUI + test setup)', () => {
+    render(
+      <ThemeProvider>
+        <TextField label='Test Field' />
+      </ThemeProvider>
+    )
+    screen.debug()
+  })
+
+  test('renders correctly for USA addresses', () => {
+    setup()
+    expect(screen.getByLabelText(/address type/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/street address/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/city/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/state/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/zip code/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/country/i)).toBeInTheDocument()
+  })
+
+  test('validates required fields', async () => {
+    const { user } = setup()
+
+    await user.clear(screen.getByLabelText(/Street Address/i))
+    await user.clear(screen.getByLabelText(/City/i))
+    await user.clear(screen.getByLabelText(/State/i))
+    await user.clear(screen.getByLabelText(/ZIP Code/i))
+
+    await user.click(screen.getByRole('button', { name: /save address/i }))
+    screen.debug()
+
+    expect(await screen.findByTestId('streetAddress-error')).toHaveTextContent(
+      'Street address is required'
+    )
+    expect(await screen.findByTestId('city-error')).toHaveTextContent(
+      'City is required'
+    )
+    expect(await screen.findByTestId('state-error')).toHaveTextContent(
+      'State must be 2 letters'
+    )
+    expect(await screen.findByTestId('zipCode-error')).toHaveTextContent(
+      'Invalid ZIP code'
+    )
+  })
+
+  test('shows different fields for Canada', async () => {
+    const { user } = setup()
+    await user.click(screen.getByLabelText(/country/i))
+    await user.click(screen.getByRole('option', { name: 'Canada' }))
+
+    expect(await screen.findByLabelText(/province/i)).toBeInTheDocument()
+    expect(await screen.findByLabelText(/postal code/i)).toBeInTheDocument()
+  })
+
+  test('shows different fields for UK', async () => {
+    const { user } = setup()
+    await user.click(screen.getByLabelText(/country/i))
+    await user.click(screen.getByRole('option', { name: 'UK' }))
+
+    expect(await screen.findByLabelText(/postcode/i)).toBeInTheDocument()
+  })
+
+  test('calls onSave with correct data', async () => {
+    const { user } = setup()
+    await user.type(screen.getByLabelText(/street address/i), '123 Main St')
+    await user.type(screen.getByLabelText(/city/i), 'Anytown')
+    await user.type(screen.getByLabelText(/state/i), 'CA')
+    await user.type(screen.getByLabelText(/zip code/i), '12345')
+
+    await user.click(screen.getByLabelText(/address type/i))
+    await user.click(screen.getByRole('option', { name: 'Home' }))
+
+    await user.click(screen.getByRole('button', { name: /save address/i }))
+
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        streetAddress: '123 Main St',
+        city: 'Anytown',
+        state: 'CA',
+        zipCode: '12345',
+        addressType: 'Home',
+        country: 'USA',
       })
+    )
+  })
 
-      // Verify specific fields are populated
-      expect(getByLabelText(/street address/i)).toHaveValue('123 Main St')
-      expect(getByLabelText(/city/i)).toHaveValue('Denver')
-      expect(getByLabelText(/state/i)).toHaveValue('CO')
-      expect(getByLabelText(/zip code/i)).toHaveValue('80202')
-    })
+  test('loads initial data for editing', () => {
+    const initialData: Address = {
+      id: '1',
+      streetAddress: '456 Oak Ave',
+      city: 'Othertown',
+      state: 'TX',
+      zipCode: '67890',
+      country: 'USA',
+      addressType: 'Work',
+    }
 
-    it('should enable Save button with valid address', async () => {
-      const { getByRole, getByLabelText } = renderComponent()
+    setup(initialData)
 
-      // Select country and address type
-      const countrySelect = getByRole('combobox', { name: /country/i })
-      const addressTypeSelect = getByRole('combobox', { name: /address type/i })
-
-      // Select USA
-      await userEvent.click(countrySelect)
-      const countryListbox = await screen.findByRole('listbox')
-      await userEvent.click(within(countryListbox).getByText('USA'))
-
-      // Select address type
-      await userEvent.click(addressTypeSelect)
-      const addressTypeListbox = await screen.findByRole('listbox')
-      await userEvent.click(within(addressTypeListbox).getByText('Shipping'))
-
-      // Fill out required fields
-      await userEvent.type(getByLabelText(/street address/i), '456 Market St')
-      await userEvent.type(getByLabelText(/city/i), 'San Francisco')
-      await userEvent.type(getByLabelText(/state/i), 'CA')
-      await userEvent.type(getByLabelText(/zip code/i), '94105')
-
-      const saveButton = getByRole('button', { name: /save address/i })
-
-      await waitFor(
-        () => {
-          expect(saveButton).toBeEnabled()
-        },
-        { timeout: 2000 }
-      )
-    })
+    expect(screen.getByDisplayValue('456 Oak Ave')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Othertown')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('TX')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('67890')).toBeInTheDocument()
   })
 })

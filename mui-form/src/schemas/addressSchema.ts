@@ -11,8 +11,15 @@ const usaAddressSchema = baseAddressSchema.extend({
   country: z.literal('USA'),
   streetAddress: validate.required('Street address is required'),
   city: validate.required('City is required'),
-  state: z.string().length(2, 'State must be 2 letters'),
-  zipCode: z.string().regex(VALIDATION.zipCode.usa, 'Invalid ZIP code'),
+  state: z
+    .string()
+    .nonempty('State is required')
+    .length(2, 'State must be 2 letters'),
+
+  zipCode: z
+    .string()
+    .nonempty('ZIP code is required')
+    .regex(VALIDATION.zipCode.usa, 'Invalid ZIP code'),
 })
 
 const canadaAddressSchema = baseAddressSchema.extend({
@@ -25,9 +32,26 @@ const canadaAddressSchema = baseAddressSchema.extend({
     .regex(VALIDATION.zipCode.canada, 'Invalid postal code'),
 })
 
+const ukAddressSchema = baseAddressSchema.extend({
+  country: z.literal('UK'),
+  streetAddress: validate.required('Street address is required'),
+  city: validate.required('City is required'),
+  postcode: z.string().regex(VALIDATION.zipCode.uk, 'Invalid postcode'),
+})
+
+const otherAddressSchema = baseAddressSchema.extend({
+  country: z.literal('Other'),
+  streetAddress: validate.required('Street address is required'),
+  city: validate.required('City is required'),
+  state: z.string().optional(),
+  zipCode: z.string().optional(),
+})
+
 export const addressSchema = z.discriminatedUnion('country', [
   usaAddressSchema,
   canadaAddressSchema,
+  ukAddressSchema,
+  otherAddressSchema,
 ])
 
 export type Address = z.infer<typeof addressSchema>

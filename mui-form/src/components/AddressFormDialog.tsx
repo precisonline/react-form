@@ -1,5 +1,5 @@
 'use client'
-import React from 'react'
+import React, { useEffect } from 'react'
 import {
   Dialog,
   DialogTitle,
@@ -13,104 +13,112 @@ import {
   InputLabel,
 } from '@mui/material'
 import {
-  Control,
+  useForm,
   Controller,
-  FieldErrors,
-  UseFormHandleSubmit,
+  SubmitHandler,
   useWatch,
+  FieldPath,
 } from 'react-hook-form'
-import { Address } from '../schemas/addressSchema'
+import { zodResolver } from '@hookform/resolvers/zod'
+import {
+  Address,
+  addressSchema,
+  defaultAddress,
+} from '../schemas/addressSchema'
 import { ENUMS } from '../schemas/common'
 
 interface AddressFormDialogProps {
   open: boolean
   onClose: () => void
-  control: Control<{ addresses: Address[] }>
-  errors: FieldErrors<{ addresses: Address[] }>
-  handleSubmit: UseFormHandleSubmit<{ addresses: Address[] }>
+  onSave: (data: Address) => void
+  initialData: Address | null
 }
 
 export default function AddressFormDialog({
   open,
   onClose,
-  control,
-  errors,
-  handleSubmit,
+  onSave,
+  initialData,
 }: AddressFormDialogProps) {
-  // Use useWatch to get the current country value
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<Address>({
+    resolver: zodResolver(addressSchema),
+    defaultValues: initialData || defaultAddress,
+    mode: 'onChange',
+  })
+
+  // useEffect(() => {
+  //   if (open) {
+  //     reset(initialData || defaultAddress)
+  //   }
+  // }, [open, initialData, reset])
+
   const selectedCountry = useWatch({
     control,
-    name: 'addresses.0.country',
+    name: 'country',
+    defaultValue: (initialData || defaultAddress).country,
   })
+
+  const onSubmit: SubmitHandler<Address> = (data) => {
+    onSave(data)
+    onClose()
+  }
 
   const addressFields = {
     USA: [
-      {
-        name: 'streetAddress',
-        label: 'Street Address',
-        required: true,
-      },
-      {
-        name: 'city',
-        label: 'City',
-        required: true,
-      },
-      {
-        name: 'state',
-        label: 'State',
-        required: true,
-      },
-      {
-        name: 'zipCode',
-        label: 'ZIP Code',
-        required: true,
-      },
+      { name: 'streetAddress', label: 'Street Address', required: true },
+      { name: 'city', label: 'City', required: true },
+      { name: 'state', label: 'State', required: true },
+      { name: 'zipCode', label: 'ZIP Code', required: true },
     ],
     Canada: [
+      { name: 'streetAddress', label: 'Street Address', required: true },
+      { name: 'city', label: 'City', required: true },
+      { name: 'province', label: 'Province', required: true },
+      { name: 'postalCode', label: 'Postal Code', required: true },
+    ],
+    UK: [
+      { name: 'streetAddress', label: 'Street Address', required: true },
+      { name: 'city', label: 'City', required: true },
+      { name: 'postcode', label: 'Postcode', required: true },
+    ],
+    Other: [
+      { name: 'streetAddress', label: 'Street Address', required: true },
+      { name: 'city', label: 'City', required: true },
       {
-        name: 'streetAddress',
-        label: 'Street Address',
-        required: true,
+        name: 'state',
+        label: 'State/Province/Region (Optional)',
+        required: false,
       },
-      {
-        name: 'city',
-        label: 'City',
-        required: true,
-      },
-      {
-        name: 'province',
-        label: 'Province',
-        required: true,
-      },
-      {
-        name: 'postalCode',
-        label: 'Postal Code',
-        required: true,
-      },
+      { name: 'zipCode', label: 'ZIP/Postal Code (Optional)', required: false },
     ],
   }
+
+  console.log('selectedCountry:', selectedCountry)
+  console.log('errors:', errors)
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth='md' fullWidth>
       <DialogTitle>Address Details</DialogTitle>
-      <form
-        onSubmit={handleSubmit((data) => {
-          console.log(data)
-          onClose()
-        })}
-      >
+      <form onSubmit={handleSubmit(onSubmit)}>
         <DialogContent>
-          {/* Address Type Selection */}
           <Controller
-            name='addresses.0.addressType'
+            name='addressType'
             control={control}
             render={({ field }) => (
               <FormControl fullWidth margin='normal'>
-                <InputLabel>Address Type</InputLabel>
+                <InputLabel id='address-type-select-label'>
+                  Address Type
+                </InputLabel>
                 <Select
                   {...field}
+                  labelId='address-type-select-label'
                   label='Address Type'
-                  error={!!errors.addresses?.[0]?.addressType}
+                  error={!!errors.addressType}
                 >
                   {ENUMS.addressTypes.map((type) => (
                     <MenuItem key={type} value={type}>
@@ -122,17 +130,17 @@ export default function AddressFormDialog({
             )}
           />
 
-          {/* Country Selection */}
           <Controller
-            name='addresses.0.country'
+            name='country'
             control={control}
             render={({ field }) => (
               <FormControl fullWidth margin='normal'>
-                <InputLabel>Country</InputLabel>
+                <InputLabel id='country-select-label'>Country</InputLabel>
                 <Select
                   {...field}
+                  labelId='country-select-label'
                   label='Country'
-                  error={!!errors.addresses?.[0]?.country}
+                  error={!!errors.country}
                 >
                   {ENUMS.countries.map((country) => (
                     <MenuItem key={country} value={country}>
@@ -144,36 +152,52 @@ export default function AddressFormDialog({
             )}
           />
 
-          {/* Dynamically render address fields based on selected country */}
+          {/* Dynamic address fields */}
           {selectedCountry &&
-            addressFields[selectedCountry as keyof typeof addressFields]?.map(
-              (addressField) => (
-                <Controller
-                  key={addressField.name}
-                  name={`addresses.0.${addressField.name}` as const}
-                  control={control}
-                  render={({ field: inputField }) => (
-                    <TextField
-                      {...inputField}
-                      margin='normal'
-                      label={addressField.label}
-                      required={addressField.required}
-                      fullWidth
-                      error={
-                        !!errors.addresses?.[0]?.[
-                          addressField.name as keyof Address
-                        ]
-                      }
-                      helperText={
-                        errors.addresses?.[0]?.[
-                          addressField.name as keyof Address
-                        ]?.message
-                      }
-                    />
-                  )}
-                />
+            (() => {
+              console.log(
+                '👉 addressFields[selectedCountry]',
+                addressFields[selectedCountry as keyof typeof addressFields]
               )
-            )}
+              return addressFields[
+                selectedCountry as keyof typeof addressFields
+              ]?.map((addressField) => {
+                console.log('👉 Rendering field:', addressField.name)
+                return (
+                  <Controller
+                    key={addressField.name}
+                    name={addressField.name as FieldPath<Address>}
+                    control={control}
+                    render={({ field: inputField }) => {
+                      console.log(
+                        '👉 inputField for',
+                        addressField.name,
+                        inputField
+                      )
+                      const fieldError =
+                        errors[addressField.name as keyof Address]
+                      return (
+                        <TextField
+                          {...inputField}
+                          margin='normal'
+                          label={addressField.label}
+                          required={addressField.required}
+                          fullWidth
+                          error={!!fieldError}
+                          helperText={
+                            fieldError?.message ? (
+                              <span data-testid={`${addressField.name}-error`}>
+                                {fieldError.message}
+                              </span>
+                            ) : null
+                          }
+                        />
+                      )
+                    }}
+                  />
+                )
+              })
+            })()}
         </DialogContent>
         <DialogActions>
           <Button onClick={onClose}>Cancel</Button>

@@ -1,5 +1,10 @@
-// src/api/submitForm.ts
-import { ContactFormData } from '../schemas/contactSchema'
+// Define ContactFormData interface or import it from the correct module
+export interface ContactFormData {
+  name: string
+  email: string
+  message: string
+  // Add other fields as needed
+}
 
 export interface SubmitResponse {
   success: boolean

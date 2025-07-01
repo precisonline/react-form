@@ -4,8 +4,9 @@ import { contactSchema } from './contactSchema'
 
 export const userProfileSchema = z.object({
   contact: contactSchema,
+  deliveryInstructions: z.string().optional(),
   addresses: z.array(addressSchema).optional(),
-  newsletter: z.boolean().default(false),
+  newsletter: z.boolean(),
 })
 
 export type UserProfileFormData = z.infer<typeof userProfileSchema>
@@ -19,4 +20,5 @@ export const defaultUserProfileValues: UserProfileFormData = {
   },
   addresses: [],
   newsletter: false,
+  deliveryInstructions: '',
 }

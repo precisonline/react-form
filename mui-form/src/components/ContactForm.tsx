@@ -10,35 +10,26 @@ import {
   Container,
   Card,
   Stack,
-  Checkbox,
-  FormControlLabel,
 } from '@mui/material'
 import {
   Contact,
   contactSchema,
   defaultContact,
 } from '../schemas/contactSchema'
-import { defaultAddress } from '../schemas/addressSchema'
-import AddressFormDialog from './AddressFormDialog'
 
 export default function ContactForm() {
   const [submitted, setSubmitted] = useState(false)
-  const [dialogOpen, setDialogOpen] = useState(false)
 
   const {
     register,
     handleSubmit,
-    control,
     formState: { errors, isValid },
     reset,
-    watch,
-    setValue,
   } = useForm<Contact>({
     resolver: zodResolver(contactSchema),
     mode: 'onChange',
     defaultValues: {
       ...defaultContact,
-      addresses: [defaultAddress],
     },
   })
 
@@ -49,17 +40,12 @@ export default function ContactForm() {
       console.log('Submitted:', data)
       setSubmitted(true)
       reset()
+      setTimeout(() => {
+        setSubmitted(false)
+      }, 3000)
     } catch (error) {
       console.error('Submission error:', error)
-    } finally {
-      setSubmitted(false)
     }
-  }
-
-  const handleAddAddress = () => {
-    // Reset addresses to a new empty address when opening dialog
-    setValue('addresses', [defaultAddress], { shouldValidate: true })
-    setDialogOpen(true)
   }
 
   return (
@@ -110,55 +96,6 @@ export default function ContactForm() {
               error={!!errors.phone}
               helperText={errors.phone?.message}
               fullWidth
-            />
-
-            <Box
-              display='flex'
-              justifyContent='space-between'
-              alignItems='center'
-            >
-              <Typography variant='subtitle1'>Addresses</Typography>
-              <Button variant='outlined' onClick={handleAddAddress}>
-                Add Address
-              </Button>
-            </Box>
-
-            {/* Optional: Display existing addresses */}
-            {watch('addresses')?.map((address, index) => (
-              <Box
-                key={index}
-                sx={{
-                  border: 1,
-                  borderColor: 'grey.300',
-                  p: 2,
-                  borderRadius: 2,
-                }}
-              >
-                <Typography>
-                  {address.addressType} - {address.country}
-                </Typography>
-                <Typography variant='body2'>
-                  {address.streetAddress}, {address.city}
-                </Typography>
-              </Box>
-            ))}
-
-            <AddressFormDialog
-              open={dialogOpen}
-              onClose={() => setDialogOpen(false)}
-              control={control}
-              errors={errors}
-              handleSubmit={handleSubmit}
-            />
-
-            <FormControlLabel
-              control={
-                <Checkbox
-                  {...register('newsletter')}
-                  checked={watch('newsletter') || false}
-                />
-              }
-              label='Subscribe to newsletter'
             />
 
             <Button type='submit' variant='contained' disabled={!isValid}>

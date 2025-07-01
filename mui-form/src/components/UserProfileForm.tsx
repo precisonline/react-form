@@ -22,18 +22,17 @@ import { Send, Add, Edit, Delete } from '@mui/icons-material'
 import {
   userProfileSchema,
   UserProfileFormData,
-  AddressFormData,
   defaultUserProfileValues,
 } from '../schemas/userProfileSchema'
 import AddressFormDialog from './AddressFormDialog'
+import { Address } from '../schemas/addressSchema'
 
 export default function UserProfileForm(): React.ReactElement {
   const [submitted, setSubmitted] = useState<boolean>(false)
   const [loading, setLoading] = useState<boolean>(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [editingAddress, setEditingAddress] = useState<AddressFormData | null>(
-    null
-  )
+  const [editingAddress, setEditingAddress] = useState<Address | null>(null)
+  const [addressError, setAddressError] = useState<string | null>(null)
 
   const {
     register,
@@ -65,12 +64,65 @@ export default function UserProfileForm(): React.ReactElement {
 
   const handleCloseModal = () => setIsModalOpen(false)
 
-  const handleSaveAddress = (data: AddressFormData) => {
+  const handleSaveAddress = (data: Address) => {
+    setAddressError(null)
+
+    const getComparableAddress = (addr: Address) => {
+      const base = {
+        addressType: addr.addressType,
+        streetAddress: addr.streetAddress,
+        city: addr.city,
+        addressLine2: addr.addressLine2 || '',
+        country: addr.country,
+      }
+      switch (addr.country) {
+        case 'USA':
+          return {
+            ...base,
+            state: addr.state,
+            zipCode: addr.zipCode,
+          }
+        case 'Canada':
+          return {
+            ...base,
+            province: addr.province,
+            postalCode: addr.postalCode,
+          }
+        case 'UK':
+          return { ...base, postcode: addr.postcode }
+        case 'Other':
+          return {
+            ...base,
+            state: addr.state || '',
+            zipCode: addr.zipCode || '',
+          }
+        default:
+          return base
+      }
+    }
+
+    const dataToCompare = getComparableAddress(data)
+
+    const isDuplicate = fields.some((field) => {
+      if (data.id && data.id === field.id) {
+        return false
+      }
+      const fieldToCompare = getComparableAddress(field)
+      return JSON.stringify(dataToCompare) === JSON.stringify(fieldToCompare)
+    })
+
+    if (isDuplicate) {
+      setAddressError('This address already exists.')
+      handleCloseModal()
+      return
+    }
+
     const index = fields.findIndex((field) => field.id === data.id)
     if (index > -1) {
       update(index, data)
     } else {
-      append(data)
+      // Assign a unique ID for new addresses
+      append({ ...data, id: crypto.randomUUID() })
     }
     handleCloseModal()
   }
@@ -87,7 +139,6 @@ export default function UserProfileForm(): React.ReactElement {
       }, 3000)
     } catch (error) {
       console.error('Error:', error)
-    } finally {
       setLoading(false)
     }
   }
@@ -116,40 +167,40 @@ export default function UserProfileForm(): React.ReactElement {
               }}
             >
               <TextField
-                {...register('firstName')}
+                {...register('contact.firstName')}
                 label='First Name'
-                error={!!errors.firstName}
-                helperText={errors.firstName?.message}
+                error={!!errors.contact?.firstName}
+                helperText={errors.contact?.firstName?.message}
                 fullWidth
                 required
                 disabled={loading}
               />
               <TextField
-                {...register('lastName')}
+                {...register('contact.lastName')}
                 label='Last Name'
-                error={!!errors.lastName}
-                helperText={errors.lastName?.message}
+                error={!!errors.contact?.lastName}
+                helperText={errors.contact?.lastName?.message}
                 fullWidth
                 required
                 disabled={loading}
               />
             </Box>
             <TextField
-              {...register('email')}
+              {...register('contact.email')}
               label='Email Address'
               type='email'
-              error={!!errors.email}
-              helperText={errors.email?.message}
+              error={!!errors.contact?.email}
+              helperText={errors.contact?.email?.message}
               fullWidth
               required
               disabled={loading}
             />
             <TextField
-              {...register('phone')}
+              {...register('contact.phone')}
               label='Phone Number'
               type='tel'
-              error={!!errors.phone}
-              helperText={errors.phone?.message}
+              error={!!errors.contact?.phone}
+              helperText={errors.contact?.phone?.message}
               fullWidth
               required
               disabled={loading}
@@ -174,6 +225,16 @@ export default function UserProfileForm(): React.ReactElement {
                 Add New
               </Button>
             </Box>
+
+            {addressError && (
+              <Alert
+                severity='error'
+                onClose={() => setAddressError(null)}
+                sx={{ mt: 2 }}
+              >
+                {addressError}
+              </Alert>
+            )}
 
             {fields.length === 0 && (
               <Card
@@ -205,11 +266,7 @@ export default function UserProfileForm(): React.ReactElement {
                         {field.addressType} Address
                       </Typography>
                       <Typography color='text.secondary'>
-                        {field.usaStreetAddress ||
-                          field.canadaStreetAddress ||
-                          field.ukStreetAddress ||
-                          field.addressLine1}
-                        , {field.country}
+                        {field.streetAddress}, {field.country}
                       </Typography>
                     </CardContent>
                     <CardActions>
