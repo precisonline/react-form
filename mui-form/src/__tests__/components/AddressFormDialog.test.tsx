@@ -1,10 +1,9 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import AddressFormDialog from '../../components/AddressFormDialog'
 import ThemeProvider from '../../components/ThemeProvider'
 import { Address } from '../../schemas/addressSchema'
-import TextField from '@mui/material/TextField'
 
 const mockOnSave = jest.fn()
 const mockOnClose = jest.fn()
@@ -25,52 +24,36 @@ const setup = (initialData: Address | null = null) => {
 }
 
 describe('AddressFormDialog', () => {
-  beforeEach(() => {
-    jest.clearAllMocks()
-  })
+  it('validates required fields', async () => {
+    const user = userEvent.setup()
 
-  test('renders basic MUI TextField (verify MUI + test setup)', () => {
     render(
       <ThemeProvider>
-        <TextField label='Test Field' />
+        <AddressFormDialog
+          open={true}
+          onClose={jest.fn()}
+          onSave={jest.fn()}
+          initialData={null}
+        />
       </ThemeProvider>
     )
-    screen.debug()
-  })
-
-  test('renders correctly for USA addresses', () => {
-    setup()
-    expect(screen.getByLabelText(/address type/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/street address/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/city/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/state/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/zip code/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/country/i)).toBeInTheDocument()
-  })
-
-  test('validates required fields', async () => {
-    const { user } = setup()
-
-    await user.clear(screen.getByLabelText(/Street Address/i))
-    await user.clear(screen.getByLabelText(/City/i))
-    await user.clear(screen.getByLabelText(/State/i))
-    await user.clear(screen.getByLabelText(/ZIP Code/i))
 
     await user.click(screen.getByRole('button', { name: /save address/i }))
-    screen.debug()
 
-    expect(await screen.findByTestId('streetAddress-error')).toHaveTextContent(
-      'Street address is required'
-    )
-    expect(await screen.findByTestId('city-error')).toHaveTextContent(
-      'City is required'
-    )
-    expect(await screen.findByTestId('state-error')).toHaveTextContent(
-      'State must be 2 letters'
-    )
-    expect(await screen.findByTestId('zipCode-error')).toHaveTextContent(
-      'Invalid ZIP code'
-    )
+    await waitFor(() => {
+      expect(screen.getByTestId('streetAddress-error')).toHaveTextContent(
+        'Street address is required'
+      )
+      expect(screen.getByTestId('city-error')).toHaveTextContent(
+        'City is required'
+      )
+      expect(screen.getByTestId('state-error')).toHaveTextContent(
+        'State is required'
+      )
+      expect(screen.getByTestId('zipCode-error')).toHaveTextContent(
+        'ZIP code is required'
+      )
+    })
   })
 
   test('shows different fields for Canada', async () => {

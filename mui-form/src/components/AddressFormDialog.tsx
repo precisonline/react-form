@@ -48,14 +48,15 @@ export default function AddressFormDialog({
   } = useForm<Address>({
     resolver: zodResolver(addressSchema),
     defaultValues: initialData || defaultAddress,
-    mode: 'onChange',
+    mode: 'onSubmit',
+    reValidateMode: 'onChange',
   })
 
-  // useEffect(() => {
-  //   if (open) {
-  //     reset(initialData || defaultAddress)
-  //   }
-  // }, [open, initialData, reset])
+  useEffect(() => {
+    if (open) {
+      reset(initialData || defaultAddress)
+    }
+  }, [open, initialData, reset])
 
   const selectedCountry = useWatch({
     control,
@@ -97,9 +98,6 @@ export default function AddressFormDialog({
       { name: 'zipCode', label: 'ZIP/Postal Code (Optional)', required: false },
     ],
   }
-
-  console.log('selectedCountry:', selectedCountry)
-  console.log('errors:', errors)
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth='md' fullWidth>
@@ -152,52 +150,37 @@ export default function AddressFormDialog({
             )}
           />
 
-          {/* Dynamic address fields */}
           {selectedCountry &&
-            (() => {
-              console.log(
-                '👉 addressFields[selectedCountry]',
-                addressFields[selectedCountry as keyof typeof addressFields]
+            addressFields[selectedCountry as keyof typeof addressFields]?.map(
+              (addressField) => (
+                <Controller
+                  key={addressField.name}
+                  name={addressField.name as FieldPath<Address>}
+                  control={control}
+                  render={({ field: inputField }) => {
+                    const fieldError =
+                      errors[addressField.name as keyof Address]
+                    return (
+                      <TextField
+                        {...inputField}
+                        margin='normal'
+                        label={addressField.label}
+                        required={addressField.required}
+                        fullWidth
+                        error={!!fieldError}
+                        helperText={
+                          fieldError?.message ? (
+                            <span data-testid={`${addressField.name}-error`}>
+                              {fieldError.message}
+                            </span>
+                          ) : null
+                        }
+                      />
+                    )
+                  }}
+                />
               )
-              return addressFields[
-                selectedCountry as keyof typeof addressFields
-              ]?.map((addressField) => {
-                console.log('👉 Rendering field:', addressField.name)
-                return (
-                  <Controller
-                    key={addressField.name}
-                    name={addressField.name as FieldPath<Address>}
-                    control={control}
-                    render={({ field: inputField }) => {
-                      console.log(
-                        '👉 inputField for',
-                        addressField.name,
-                        inputField
-                      )
-                      const fieldError =
-                        errors[addressField.name as keyof Address]
-                      return (
-                        <TextField
-                          {...inputField}
-                          margin='normal'
-                          label={addressField.label}
-                          required={addressField.required}
-                          fullWidth
-                          error={!!fieldError}
-                          helperText={
-                            fieldError?.message ? (
-                              <span data-testid={`${addressField.name}-error`}>
-                                {fieldError.message}
-                              </span>
-                            ) : null
-                          }
-                        />
-                      )
-                    }}
-                  />
-                )
-              })
-            })()}
+            )}
         </DialogContent>
         <DialogActions>
           <Button onClick={onClose}>Cancel</Button>

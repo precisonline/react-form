@@ -228,6 +228,7 @@ const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
     <Paper variant='outlined' sx={{ overflow: 'hidden' }}>
       {showToolbar && (
         <Toolbar
+          data-testid='wysiwyg-toolbar'
           variant='dense'
           sx={{
             minHeight: 64,

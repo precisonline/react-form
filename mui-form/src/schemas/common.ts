@@ -23,5 +23,5 @@ export const validate = {
   phone: (message = 'Invalid phone number') =>
     z.string().regex(VALIDATION.phone, message),
 
-  required: (message = 'This field is required') => z.string().min(1, message),
+  required: (msg = 'This field is required') => z.string().trim().min(1, msg),
 }
