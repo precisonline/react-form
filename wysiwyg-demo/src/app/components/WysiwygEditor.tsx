@@ -139,6 +139,7 @@ const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
     <Tooltip title={title}>
       <IconButton
         onClick={onClick}
+        onMouseDown={(e) => e.preventDefault()} // Prevents editor from losing focus
         disabled={disabled}
         size='small'
         sx={{
@@ -155,14 +156,17 @@ const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
   )
 
   const handleColorClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault()
     setColorAnchorEl(event.currentTarget)
   }
 
   const handleHighlightClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault()
     setHighlightAnchorEl(event.currentTarget)
   }
 
   const handleLinkClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault()
     const { from, to } = editor.state.selection
     const text = editor.state.doc.textBetween(from, to, '')
     if (text) {
@@ -230,6 +234,11 @@ const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
         <Toolbar
           data-testid='wysiwyg-toolbar'
           variant='dense'
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) {
+              e.preventDefault()
+            }
+          }}
           sx={{
             minHeight: 64,
             backgroundColor: 'grey.50',
@@ -240,7 +249,6 @@ const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
             py: 1,
           }}
         >
-          {/* Text Formatting */}
           <FormControl size='small' sx={{ minWidth: 120 }}>
             <Select
               value={
@@ -254,17 +262,20 @@ const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
               }
               onChange={(e) => {
                 const value = e.target.value
-                if (value === 'paragraph') {
-                  editor.chain().focus().setParagraph().run()
-                } else {
-                  const level = parseInt(value.replace('h', ''))
-                  editor
-                    .chain()
-                    .focus()
-                    .toggleHeading({ level: level as 1 | 2 | 3 })
-                    .run()
-                }
+                setTimeout(() => {
+                  if (value === 'paragraph') {
+                    editor.chain().focus().setParagraph().run()
+                  } else {
+                    const level = parseInt(value.replace('h', ''))
+                    editor
+                      .chain()
+                      .focus()
+                      .toggleHeading({ level: level as 1 | 2 | 3 })
+                      .run()
+                  }
+                }, 0)
               }}
+              onMouseDown={(e) => e.preventDefault()}
               displayEmpty
               sx={{ fontSize: '0.875rem' }}
             >
@@ -277,7 +288,6 @@ const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
 
           <Divider orientation='vertical' flexItem sx={{ mx: 0.5 }} />
 
-          {/* Basic Formatting */}
           <ToolbarButton
             onClick={() => editor.chain().focus().toggleBold().run()}
             isActive={editor.isActive('bold')}
@@ -320,19 +330,16 @@ const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
 
           <Divider orientation='vertical' flexItem sx={{ mx: 0.5 }} />
 
-          {/* Text Color */}
           <ToolbarButton onClick={handleColorClick} title='Text Color'>
             <FormatColorText fontSize='small' />
           </ToolbarButton>
 
-          {/* Highlight Color */}
           <ToolbarButton onClick={handleHighlightClick} title='Highlight Color'>
             <FormatColorFill fontSize='small' />
           </ToolbarButton>
 
           <Divider orientation='vertical' flexItem sx={{ mx: 0.5 }} />
 
-          {/* Text Alignment */}
           <ToolbarButton
             onClick={() => editor.chain().focus().setTextAlign('left').run()}
             isActive={editor.isActive({ textAlign: 'left' })}
@@ -367,7 +374,6 @@ const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
 
           <Divider orientation='vertical' flexItem sx={{ mx: 0.5 }} />
 
-          {/* Lists */}
           <ToolbarButton
             onClick={() => editor.chain().focus().toggleBulletList().run()}
             isActive={editor.isActive('bulletList')}
@@ -394,7 +400,6 @@ const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
 
           <Divider orientation='vertical' flexItem sx={{ mx: 0.5 }} />
 
-          {/* Links and Images */}
           <ToolbarButton
             onClick={handleLinkClick}
             isActive={editor.isActive('link')}
@@ -409,7 +414,6 @@ const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
 
           <Divider orientation='vertical' flexItem sx={{ mx: 0.5 }} />
 
-          {/* Undo/Redo */}
           <ToolbarButton
             onClick={() => editor.chain().focus().undo().run()}
             disabled={!editor.can().chain().focus().undo().run()}
@@ -428,7 +432,6 @@ const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
         </Toolbar>
       )}
 
-      {/* Color Picker Popover */}
       <Popover
         open={Boolean(colorAnchorEl)}
         anchorEl={colorAnchorEl}
@@ -474,7 +477,6 @@ const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
         </Box>
       </Popover>
 
-      {/* Highlight Color Popover */}
       <Popover
         open={Boolean(highlightAnchorEl)}
         anchorEl={highlightAnchorEl}
@@ -520,7 +522,6 @@ const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
         </Box>
       </Popover>
 
-      {/* Link Dialog */}
       <Popover
         open={Boolean(linkAnchorEl)}
         anchorEl={linkAnchorEl}
@@ -557,7 +558,6 @@ const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
         </Box>
       </Popover>
 
-      {/* Editor Content */}
       <Box
         sx={{
           minHeight: `${minHeight}px`,
@@ -565,7 +565,6 @@ const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
           '& .ProseMirror': {
             outline: 'none',
             minHeight: `${minHeight - 32}px`,
-
             '& ul, & ol': {
               paddingLeft: '1.5rem',
             },

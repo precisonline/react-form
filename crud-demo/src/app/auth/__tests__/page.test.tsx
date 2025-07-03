@@ -1,6 +1,7 @@
+import React from 'react'
 import { render, screen, act, waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom'
-import AuthPage from '@/app/auth/page'
+import AuthPage from '../page'
 import { SupabaseClient } from '@supabase/supabase-js'
 
 // --- Mocks Setup ---

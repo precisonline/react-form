@@ -316,6 +316,7 @@ export default function NotesClient({ initialNotes, user }: NotesClientProps) {
                     <IconButton
                       onClick={() => setEditingNote(note)}
                       disabled={isDeleting !== null}
+                      data-testid={`edit-button-${note.id}`}
                     >
                       <EditIcon />
                     </IconButton>
