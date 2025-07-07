@@ -1,85 +1,156 @@
-import { render, screen } from '@testing-library/react'
+import React from 'react'
+import { render, screen, waitFor } from '@testing-library/react'
+import '@testing-library/jest-dom'
 import userEvent from '@testing-library/user-event'
-import { ThemeProvider } from '@mui/material/styles'
 import Home from './page'
-import theme from '../../theme'
+import { ThemeProvider, createTheme } from '@mui/material/styles'
 
-interface Note {
-  id: string
-  title: string
-  content: string
+// Mock the entire Supabase client module
+const mockSupabase = {
+  from: jest.fn(),
 }
 
-let notesInDb: Note[] = []
-
 jest.mock('@supabase/auth-helpers-nextjs', () => ({
-  createClientComponentClient: jest.fn(() => ({
-    from: jest.fn(() => ({
-      select: jest.fn().mockImplementation(() => ({
-        order: jest
-          .fn()
-          .mockResolvedValue({ data: [...notesInDb], error: null }),
-      })),
-
-      insert: jest.fn().mockImplementation((newNotes: Note[]) => {
-        notesInDb.push(...newNotes)
-        return {
-          select: jest.fn(() => ({
-            single: jest
-              .fn()
-              .mockResolvedValue({ data: newNotes[0], error: null }),
-          })),
-        }
-      }),
-
-      update: jest.fn().mockImplementation((updatedNote: Partial<Note>) => {
-        const noteIndex = notesInDb.findIndex((n) => n.id === updatedNote.id)
-        if (noteIndex > -1) {
-          notesInDb[noteIndex] = { ...notesInDb[noteIndex], ...updatedNote }
-        }
-        return {
-          select: jest.fn(() => ({
-            single: jest
-              .fn()
-              .mockResolvedValue({ data: notesInDb[noteIndex], error: null }),
-          })),
-        }
-      }),
-      delete: jest.fn().mockImplementation(({ id }: { id: string }) => {
-        notesInDb = notesInDb.filter((n) => n.id !== id)
-        return { error: null }
-      }),
-    })),
-  })),
+  createClientComponentClient: () => mockSupabase,
 }))
 
-describe('Home Component Integration Tests', () => {
+const theme = createTheme()
+
+describe('Home Page Integration Tests', () => {
   beforeEach(() => {
-    notesInDb = []
+    // Reset mocks before each test
     jest.clearAllMocks()
   })
 
-  it('allows creating, updating, and deleting a note', async () => {
-    const user = userEvent.setup()
+  it('should render the page with notes', async () => {
+    // Arrange: Mock the initial data fetch
+    mockSupabase.from.mockReturnValue({
+      select: jest.fn().mockReturnValue({
+        order: jest.fn().mockResolvedValue({
+          data: [
+            {
+              id: '1',
+              title: 'Test Note',
+              content: 'This is a test note.',
+              created_at: new Date().toISOString(),
+            },
+          ],
+          error: null,
+        }),
+      }),
+    })
+
+    // Act
     render(
       <ThemeProvider theme={theme}>
         <Home />
       </ThemeProvider>
     )
 
-    await screen.findByRole('heading', { name: /notes/i })
+    // Assert
+    expect(await screen.findByText('Test Note')).toBeInTheDocument()
+  })
 
-    await user.type(
-      screen.getByRole('textbox', { name: /title/i }),
-      'My Test Note'
+  it('should create a new note and refetch the list', async () => {
+    const user = userEvent.setup()
+    // Arrange: Mock the initial empty list, the insert action, and the refetch
+    mockSupabase.from
+      .mockReturnValueOnce({
+        // For initial getNotes
+        select: jest.fn().mockReturnValue({
+          order: jest.fn().mockResolvedValue({ data: [], error: null }),
+        }),
+      })
+      .mockReturnValueOnce({
+        // For handleCreateNote
+        insert: jest.fn().mockReturnValue({
+          select: jest.fn().mockReturnValue({
+            single: jest.fn().mockResolvedValue({
+              data: { id: '2', title: 'New Note' },
+              error: null,
+            }),
+          }),
+        }),
+      })
+      .mockReturnValueOnce({
+        // For the getNotes refetch
+        select: jest.fn().mockReturnValue({
+          order: jest.fn().mockResolvedValue({
+            data: [
+              {
+                id: '2',
+                title: 'New Note',
+                content: 'A new note.',
+                created_at: new Date().toISOString(),
+              },
+            ],
+            error: null,
+          }),
+        }),
+      })
+
+    // Act
+    render(
+      <ThemeProvider theme={theme}>
+        <Home />
+      </ThemeProvider>
     )
-    await user.type(
-      screen.getByRole('textbox', { name: /content/i }),
-      'Test content.'
-    )
+
+    await user.type(screen.getByLabelText(/title/i), 'New Note')
+    await user.type(screen.getByLabelText(/content/i), 'A new note.')
     await user.click(screen.getByRole('button', { name: /create note/i }))
 
-    const newNote = await screen.findByText('My Test Note')
-    expect(newNote).toBeInTheDocument()
+    // Assert
+    expect(await screen.findByText('New Note')).toBeInTheDocument()
+  })
+
+  it('should delete a note', async () => {
+    const user = userEvent.setup()
+
+    // Arrange: Mock initial fetch, the delete action, and the refetch
+    mockSupabase.from
+      .mockReturnValueOnce({
+        // For initial getNotes
+        select: jest.fn().mockReturnValue({
+          order: jest.fn().mockResolvedValue({
+            data: [
+              {
+                id: '1',
+                title: 'Note To Delete',
+                content: 'Content',
+                created_at: new Date().toISOString(),
+              },
+            ],
+            error: null,
+          }),
+        }),
+      })
+      .mockReturnValueOnce({
+        // For handleDeleteNote
+        delete: jest.fn().mockReturnValue({
+          eq: jest.fn().mockResolvedValue({ error: null }),
+        }),
+      })
+      .mockReturnValueOnce({
+        // For getNotes refetch
+        select: jest.fn().mockReturnValue({
+          order: jest.fn().mockResolvedValue({ data: [], error: null }),
+        }),
+      })
+
+    // Act
+    render(
+      <ThemeProvider theme={theme}>
+        <Home />
+      </ThemeProvider>
+    )
+
+    expect(await screen.findByText('Note To Delete')).toBeInTheDocument()
+    await user.click(screen.getByLabelText(/delete/i))
+
+    // Assert
+    await waitFor(() => {
+      expect(screen.queryByText('Note To Delete')).not.toBeInTheDocument()
+    })
   })
 })

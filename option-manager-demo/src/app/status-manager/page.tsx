@@ -21,28 +21,38 @@ import {
 } from '@hello-pangea/dnd'
 import { ChromePicker } from 'react-color'
 
-// Import shared types
-import { Option, StatusFlowManagerProps } from '../types/options'
+interface Option {
+  id: string
+  name: string
+  color: string
+  order: number
+  active: boolean
+  type: 'status' | 'priority' | 'classification'
+}
 
-const StatusFlowManager: React.FC<StatusFlowManagerProps> = ({
-  options,
+interface StatusFlowManagerProps {
+  options: Option[]
+  onSave: (options: Option[]) => Promise<void>
+  onReorder: (startIndex: number, endIndex: number) => void
+  onDelete: (id: string) => void
+}
+
+const EditStatusForm = ({
+  status,
   onSave,
-  onReorder,
+  onCancel,
+  onDelete,
+}: {
+  status: Option
+  onSave: (id: string, name: string, color: string) => void
+  onCancel: () => void
+  onDelete: (id: string) => void
 }) => {
-  const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState({
-    name: '',
-    color: '',
-    showColorPicker: false,
+    name: status.name,
+    color: status.color,
   })
-  const [isAdding, setIsAdding] = useState(false)
-  const [newStatusForm, setNewStatusForm] = useState({
-    name: '',
-    color: '#2196f3',
-    showColorPicker: false,
-  })
-
-  const sortedOptions = [...options].sort((a, b) => a.order - b.order)
+  const [showColorPicker, setShowColorPicker] = useState(false)
 
   const colorOptions = [
     '#f44336',
@@ -63,69 +73,121 @@ const StatusFlowManager: React.FC<StatusFlowManagerProps> = ({
     '#ff5722',
     '#795548',
     '#607d8b',
-    '#424242',
-    '#000000',
   ]
 
-  const handleEditStart = useCallback((option: Option) => {
-    setEditingId(option.id)
-    setEditForm({
-      name: option.name,
-      color: option.color,
-      showColorPicker: false,
-    })
-  }, [])
+  const handleSaveClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onSave(status.id, editForm.name, editForm.color)
+  }
 
-  const handleEditSave = useCallback(async () => {
-    if (!editingId) return
+  const handleCancelClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onCancel()
+  }
 
-    const updatedOptions = options.map((opt) =>
-      opt.id === editingId
-        ? { ...opt, name: editForm.name, color: editForm.color }
-        : opt
-    )
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onDelete(status.id)
+  }
 
-    await onSave(updatedOptions)
-    setEditingId(null)
-  }, [editingId, editForm, options, onSave])
-
-  const handleEditCancel = useCallback(() => {
-    setEditingId(null)
-    setEditForm({ name: '', color: '', showColorPicker: false })
-  }, [])
-
-  // Click outside to cancel editing
-  const handleContainerClick = useCallback(
-    (e: React.MouseEvent) => {
-      if (editingId && e.target === e.currentTarget) {
-        handleEditCancel()
-      }
-    },
-    [editingId, handleEditCancel]
+  return (
+    <Box sx={{ width: '100%' }} onClick={(e) => e.stopPropagation()}>
+      <TextField
+        value={editForm.name}
+        onChange={(e) =>
+          setEditForm((prev) => ({ ...prev, name: e.target.value }))
+        }
+        size='small'
+        fullWidth
+        autoFocus
+        sx={{ mb: 1, '& .MuiInputBase-root': { backgroundColor: 'white' } }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter')
+            onSave(status.id, editForm.name, editForm.color)
+          if (e.key === 'Escape') onCancel()
+        }}
+      />
+      <Box display='flex' flexWrap='wrap' gap={0.5} my={1}>
+        {colorOptions.map((color) => (
+          <Box
+            key={color}
+            onClick={() => setEditForm((prev) => ({ ...prev, color }))}
+            sx={{
+              width: 20,
+              height: 20,
+              backgroundColor: color,
+              borderRadius: '50%',
+              cursor: 'pointer',
+              border:
+                editForm.color === color ? '2px solid white' : '1px solid grey',
+            }}
+          />
+        ))}
+      </Box>
+      <Button size='small' onClick={() => setShowColorPicker((prev) => !prev)}>
+        ⚙️ Custom Color
+      </Button>
+      {showColorPicker && (
+        <Box sx={{ mt: 1, position: 'absolute', zIndex: 2, right: 0 }}>
+          <ChromePicker
+            color={editForm.color}
+            onChange={(color) =>
+              setEditForm((prev) => ({ ...prev, color: color.hex }))
+            }
+          />
+        </Box>
+      )}
+      <Box
+        display='flex'
+        justifyContent='space-around'
+        mt={showColorPicker ? 25 : 1}
+      >
+        <Button
+          size='small'
+          onClick={handleSaveClick}
+          sx={{ color: 'lightgreen' }}
+        >
+          ✓
+        </Button>
+        <Button size='small' onClick={handleCancelClick} sx={{ color: 'pink' }}>
+          ✕
+        </Button>
+        <Button size='small' onClick={handleDeleteClick} sx={{ color: 'pink' }}>
+          🗑
+        </Button>
+      </Box>
+    </Box>
   )
+}
 
-  const handleDelete = useCallback(
-    async (statusId: string) => {
-      if (options.length <= 1) {
-        alert('Cannot delete the last status. At least one status is required.')
-        return
-      }
+const StatusFlowManager: React.FC<StatusFlowManagerProps> = ({
+  options,
+  onSave,
+  onReorder,
+  onDelete,
+}) => {
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [isAdding, setIsAdding] = useState(false)
+  const [newStatusForm, setNewStatusForm] = useState({
+    name: '',
+    color: '#2196f3',
+  })
 
-      if (window.confirm('Are you sure you want to delete this status?')) {
-        const updatedOptions = options.filter((opt) => opt.id !== statusId)
-        const reorderedOptions = updatedOptions.map((opt, index) => ({
-          ...opt,
-          order: index,
-        }))
-        await onSave(reorderedOptions)
-      }
+  const sortedOptions = [...options].sort((a, b) => a.order - b.order)
+
+  const handleEditSave = useCallback(
+    async (id: string, name: string, color: string) => {
+      const updatedOptions = options.map((opt) =>
+        opt.id === id ? { ...opt, name, color } : opt
+      )
+      await onSave(updatedOptions)
+      setEditingId(null)
     },
     [options, onSave]
   )
 
   const handleAddStatus = useCallback(async () => {
     if (!newStatusForm.name.trim()) return
-
     const newStatus: Option = {
       id: `status_${Date.now()}`,
       name: newStatusForm.name,
@@ -134,20 +196,15 @@ const StatusFlowManager: React.FC<StatusFlowManagerProps> = ({
       active: true,
       type: 'status',
     }
-
     await onSave([...options, newStatus])
-    setNewStatusForm({ name: '', color: '#2196f3', showColorPicker: false })
+    setNewStatusForm({ name: '', color: '#2196f3' })
     setIsAdding(false)
   }, [newStatusForm, options, onSave])
 
   const handleDragEnd = useCallback(
     (result: DropResult) => {
       if (!result.destination) return
-
-      const { source, destination } = result
-      if (source.index === destination.index) return
-
-      onReorder(source.index, destination.index)
+      onReorder(result.source.index, result.destination.index)
     },
     [onReorder]
   )
@@ -171,23 +228,10 @@ const StatusFlowManager: React.FC<StatusFlowManagerProps> = ({
             Add Status
           </Button>
         </Box>
-
         <DragDropContext onDragEnd={handleDragEnd}>
           <Droppable droppableId='status-flow' direction='horizontal'>
-            {(provided, snapshot) => (
-              <Box
-                {...provided.droppableProps}
-                ref={provided.innerRef}
-                onClick={handleContainerClick}
-                sx={{
-                  pb: 2,
-                  backgroundColor: snapshot.isDraggingOver
-                    ? 'action.hover'
-                    : 'transparent',
-                  borderRadius: 1,
-                  transition: 'background-color 0.2s',
-                }}
-              >
+            {(provided) => (
+              <Box {...provided.droppableProps} ref={provided.innerRef}>
                 <Stack
                   direction='row'
                   spacing={1}
@@ -203,190 +247,25 @@ const StatusFlowManager: React.FC<StatusFlowManagerProps> = ({
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
                             sx={{
-                              display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'center',
                               p: 2,
                               borderRadius: 2,
-                              backgroundColor:
-                                editingId === status.id
-                                  ? editForm.color
-                                  : status.color,
+                              backgroundColor: status.color,
                               color: 'white',
                               minWidth: 140,
+                              cursor: 'grab',
                               position: 'relative',
-                              cursor: snapshot.isDragging ? 'grabbing' : 'grab',
-                              transition: 'all 0.3s ease',
-                              opacity: snapshot.isDragging ? 0.8 : 1,
-                              transform: snapshot.isDragging
-                                ? 'rotate(5deg)'
-                                : 'none',
-                              boxShadow: snapshot.isDragging ? 4 : 1,
-                              '&:hover': {
-                                transform: snapshot.isDragging
-                                  ? 'rotate(5deg)'
-                                  : 'translateY(-2px)',
-                                boxShadow: snapshot.isDragging ? 4 : 3,
-                              },
                             }}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              if (!snapshot.isDragging) {
-                                handleEditStart(status)
-                              }
-                            }}
+                            onClick={() =>
+                              !snapshot.isDragging && setEditingId(status.id)
+                            }
                           >
                             {editingId === status.id ? (
-                              <Box sx={{ width: '100%' }}>
-                                <TextField
-                                  value={editForm.name}
-                                  onChange={(e) =>
-                                    setEditForm((prev) => ({
-                                      ...prev,
-                                      name: e.target.value,
-                                    }))
-                                  }
-                                  size='small'
-                                  fullWidth
-                                  sx={{
-                                    mb: 1,
-                                    '& .MuiInputBase-root': {
-                                      backgroundColor: 'white',
-                                    },
-                                  }}
-                                  autoFocus
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') handleEditSave()
-                                    if (e.key === 'Escape') handleEditCancel()
-                                  }}
-                                />
-
-                                <Box sx={{ mb: 1 }}>
-                                  <Box
-                                    display='flex'
-                                    flexWrap='wrap'
-                                    gap={0.5}
-                                    mb={1}
-                                  >
-                                    {colorOptions.map((color) => (
-                                      <Box
-                                        key={color}
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          setEditForm((prev) => ({
-                                            ...prev,
-                                            color,
-                                            showColorPicker: false,
-                                          }))
-                                        }}
-                                        sx={{
-                                          width: 16,
-                                          height: 16,
-                                          backgroundColor: color,
-                                          borderRadius: '50%',
-                                          cursor: 'pointer',
-                                          border:
-                                            editForm.color === color
-                                              ? '2px solid white'
-                                              : '1px solid rgba(255,255,255,0.3)',
-                                        }}
-                                      />
-                                    ))}
-                                  </Box>
-
-                                  <Box
-                                    sx={{
-                                      backgroundColor: 'white',
-                                      borderRadius: 1,
-                                      p: 1,
-                                      color: 'black',
-                                    }}
-                                  >
-                                    <Button
-                                      size='small'
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        setEditForm((prev) => ({
-                                          ...prev,
-                                          showColorPicker:
-                                            !prev.showColorPicker,
-                                        }))
-                                      }}
-                                      sx={{
-                                        color: 'black',
-                                        fontSize: '0.7rem',
-                                        p: 0.5,
-                                        mb: 1,
-                                      }}
-                                    >
-                                      ⚙️ Custom Color
-                                    </Button>
-                                    {editForm.showColorPicker && (
-                                      <Box
-                                        onClick={(e) => e.stopPropagation()}
-                                        sx={{ mb: 1 }}
-                                      >
-                                        <ChromePicker
-                                          color={editForm.color}
-                                          onChange={(color) =>
-                                            setEditForm((prev) => ({
-                                              ...prev,
-                                              color: color.hex,
-                                            }))
-                                          }
-                                        />
-                                      </Box>
-                                    )}
-
-                                    <Box display='flex' gap={0.5}>
-                                      <Button
-                                        size='small'
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          handleEditSave()
-                                        }}
-                                        sx={{
-                                          color: 'green',
-                                          minWidth: 'auto',
-                                          p: 0.5,
-                                          fontWeight: 'bold',
-                                        }}
-                                      >
-                                        ✓
-                                      </Button>
-                                      <Button
-                                        size='small'
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          handleEditCancel()
-                                        }}
-                                        sx={{
-                                          color: 'red',
-                                          minWidth: 'auto',
-                                          p: 0.5,
-                                          fontWeight: 'bold',
-                                        }}
-                                      >
-                                        ✕
-                                      </Button>
-                                      <Button
-                                        size='small'
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          handleDelete(status.id)
-                                        }}
-                                        sx={{
-                                          color: 'red',
-                                          minWidth: 'auto',
-                                          p: 0.5,
-                                        }}
-                                      >
-                                        🗑
-                                      </Button>
-                                    </Box>
-                                  </Box>
-                                </Box>
-                              </Box>
+                              <EditStatusForm
+                                status={status}
+                                onSave={handleEditSave}
+                                onCancel={() => setEditingId(null)}
+                                onDelete={onDelete}
+                              />
                             ) : (
                               <>
                                 <Box
@@ -399,8 +278,6 @@ const StatusFlowManager: React.FC<StatusFlowManagerProps> = ({
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     mb: 1,
-                                    fontSize: '1rem',
-                                    fontWeight: 'bold',
                                   }}
                                 >
                                   {index + 1}
@@ -410,43 +287,10 @@ const StatusFlowManager: React.FC<StatusFlowManagerProps> = ({
                                   sx={{
                                     textAlign: 'center',
                                     fontWeight: 'bold',
-                                    fontSize: '0.75rem',
-                                    lineHeight: 1.2,
-                                    color: 'white',
                                   }}
                                 >
                                   {status.name}
                                 </Typography>
-                                <Box
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleDelete(status.id)
-                                  }}
-                                  sx={{
-                                    position: 'absolute',
-                                    top: 4,
-                                    right: 4,
-                                    width: 20,
-                                    height: 20,
-                                    borderRadius: '50%',
-                                    backgroundColor: 'rgba(0,0,0,0.5)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    cursor: 'pointer',
-                                    opacity: 0,
-                                    transition: 'opacity 0.2s',
-                                    fontSize: '0.8rem',
-                                    '&:hover': {
-                                      backgroundColor: 'rgba(255,0,0,0.7)',
-                                    },
-                                    '.MuiBox-root:hover &': {
-                                      opacity: 1,
-                                    },
-                                  }}
-                                >
-                                  🗑
-                                </Box>
                               </>
                             )}
                           </Box>
@@ -465,163 +309,53 @@ const StatusFlowManager: React.FC<StatusFlowManagerProps> = ({
                     </React.Fragment>
                   ))}
                   {provided.placeholder}
-
                   {isAdding && (
-                    <>
-                      {sortedOptions.length > 0 && (
-                        <Box
-                          sx={{
-                            width: 30,
-                            height: 3,
-                            borderRadius: 1,
-                            backgroundColor: 'grey.300',
-                          }}
-                        />
-                      )}
-                      <Box
+                    <Box
+                      sx={{
+                        p: 2,
+                        borderRadius: 2,
+                        backgroundColor: newStatusForm.color,
+                        minWidth: 140,
+                      }}
+                    >
+                      <TextField
+                        value={newStatusForm.name}
+                        onChange={(e) =>
+                          setNewStatusForm((prev) => ({
+                            ...prev,
+                            name: e.target.value,
+                          }))
+                        }
+                        placeholder='Status name'
+                        size='small'
+                        fullWidth
+                        autoFocus
                         sx={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          p: 2,
-                          borderRadius: 2,
-                          backgroundColor: newStatusForm.color,
-                          color: 'white',
-                          minWidth: 140,
-                          position: 'relative',
+                          mb: 1,
+                          '& .MuiInputBase-root': { backgroundColor: 'white' },
                         }}
-                      >
-                        <TextField
-                          value={newStatusForm.name}
-                          onChange={(e) =>
-                            setNewStatusForm((prev) => ({
-                              ...prev,
-                              name: e.target.value,
-                            }))
-                          }
-                          placeholder='Status name'
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleAddStatus()
+                          if (e.key === 'Escape') setIsAdding(false)
+                        }}
+                      />
+                      <Box display='flex' justifyContent='space-around'>
+                        <Button
                           size='small'
-                          fullWidth
-                          sx={{
-                            mb: 1,
-                            '& .MuiInputBase-root': {
-                              backgroundColor: 'white',
-                            },
-                          }}
-                          autoFocus
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleAddStatus()
-                            if (e.key === 'Escape') setIsAdding(false)
-                          }}
-                        />
-
-                        <Box sx={{ mb: 1, width: '100%' }}>
-                          <Box display='flex' flexWrap='wrap' gap={0.5} mb={1}>
-                            {colorOptions.map((color) => (
-                              <Box
-                                key={color}
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setNewStatusForm((prev) => ({
-                                    ...prev,
-                                    color,
-                                    showColorPicker: false,
-                                  }))
-                                }}
-                                sx={{
-                                  width: 16,
-                                  height: 16,
-                                  backgroundColor: color,
-                                  borderRadius: '50%',
-                                  cursor: 'pointer',
-                                  border:
-                                    newStatusForm.color === color
-                                      ? '2px solid white'
-                                      : '1px solid rgba(255,255,255,0.3)',
-                                }}
-                              />
-                            ))}
-                          </Box>
-
-                          <Box
-                            sx={{
-                              backgroundColor: 'white',
-                              borderRadius: 1,
-                              p: 1,
-                              color: 'black',
-                            }}
-                          >
-                            <Button
-                              size='small'
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setNewStatusForm((prev) => ({
-                                  ...prev,
-                                  showColorPicker: !prev.showColorPicker,
-                                }))
-                              }}
-                              sx={{
-                                color: 'black',
-                                fontSize: '0.7rem',
-                                p: 0.5,
-                                mb: 1,
-                              }}
-                            >
-                              ⚙️ Custom Color
-                            </Button>
-                            {newStatusForm.showColorPicker && (
-                              <Box
-                                onClick={(e) => e.stopPropagation()}
-                                sx={{ mb: 1 }}
-                              >
-                                <ChromePicker
-                                  color={newStatusForm.color}
-                                  onChange={(color) =>
-                                    setNewStatusForm((prev) => ({
-                                      ...prev,
-                                      color: color.hex,
-                                    }))
-                                  }
-                                />
-                              </Box>
-                            )}
-
-                            <Box display='flex' gap={0.5}>
-                              <Button
-                                size='small'
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleAddStatus()
-                                }}
-                                sx={{
-                                  color: 'green',
-                                  minWidth: 'auto',
-                                  p: 0.5,
-                                  fontWeight: 'bold',
-                                }}
-                              >
-                                ✓
-                              </Button>
-                              <Button
-                                size='small'
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setIsAdding(false)
-                                }}
-                                sx={{
-                                  color: 'red',
-                                  minWidth: 'auto',
-                                  p: 0.5,
-                                  fontWeight: 'bold',
-                                }}
-                              >
-                                ✕
-                              </Button>
-                            </Box>
-                          </Box>
-                        </Box>
+                          onClick={handleAddStatus}
+                          sx={{ color: 'lightgreen' }}
+                        >
+                          ✓
+                        </Button>
+                        <Button
+                          size='small'
+                          onClick={() => setIsAdding(false)}
+                          sx={{ color: 'pink' }}
+                        >
+                          ✕
+                        </Button>
                       </Box>
-                    </>
+                    </Box>
                   )}
                 </Stack>
               </Box>
@@ -670,35 +404,37 @@ export default function StatusManagerPage() {
   ])
 
   const handleSave = useCallback(async (updatedStatuses: Option[]) => {
-    await new Promise((resolve) => setTimeout(resolve, 500))
+    await new Promise((resolve) => setTimeout(resolve, 100))
     setStatuses(updatedStatuses)
   }, [])
 
-  const handleReorder = useCallback(
-    (startIndex: number, endIndex: number) => {
-      const reorderedStatuses = Array.from(statuses)
-      const [removed] = reorderedStatuses.splice(startIndex, 1)
-      reorderedStatuses.splice(endIndex, 0, removed)
+  const handleReorder = useCallback((startIndex: number, endIndex: number) => {
+    setStatuses((prevStatuses) => {
+      const reordered = Array.from(prevStatuses)
+      const [removed] = reordered.splice(startIndex, 1)
+      reordered.splice(endIndex, 0, removed)
+      return reordered.map((status, index) => ({ ...status, order: index }))
+    })
+  }, [])
 
-      const updatedStatuses = reorderedStatuses.map((status, index) => ({
-        ...status,
-        order: index,
-      }))
-
-      setStatuses(updatedStatuses)
-    },
-    [statuses]
-  )
+  const handleDelete = useCallback((statusId: string) => {
+    setStatuses((prevStatuses) => {
+      if (prevStatuses.length <= 1) {
+        alert('Cannot delete the last status. At least one status is required.')
+        return prevStatuses
+      }
+      if (window.confirm('Are you sure you want to delete this status?')) {
+        const updatedOptions = prevStatuses.filter((opt) => opt.id !== statusId)
+        return updatedOptions.map((opt, index) => ({ ...opt, order: index }))
+      }
+      return prevStatuses
+    })
+  }, [])
 
   return (
     <Container maxWidth='lg' sx={{ py: 4 }}>
       <Box mb={4}>
-        <Button
-          component={Link}
-          href='/'
-          startIcon={<ArrowBack />}
-          sx={{ mb: 2 }}
-        >
+        <Button component={Link} href='/' startIcon={<ArrowBack />}>
           Back to Home
         </Button>
         <Typography variant='h4' component='h1' gutterBottom>
@@ -709,11 +445,11 @@ export default function StatusManagerPage() {
           new status
         </Typography>
       </Box>
-
       <StatusFlowManager
         options={statuses}
         onSave={handleSave}
         onReorder={handleReorder}
+        onDelete={handleDelete}
       />
     </Container>
   )

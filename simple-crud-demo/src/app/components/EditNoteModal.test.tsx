@@ -94,4 +94,18 @@ describe('EditNoteModal Component', () => {
     fireEvent.keyDown(modal, { key: 'Escape', code: 'Escape' })
     expect(onClose).toHaveBeenCalledTimes(1)
   })
+
+  it('does not render the modal when the open prop is false', () => {
+    const { queryByRole } = render(
+      <ThemeProvider theme={theme}>
+        <EditNoteModal
+          open={false}
+          onClose={() => {}}
+          note={mockNote}
+          onUpdate={() => {}}
+        />
+      </ThemeProvider>
+    )
+    expect(queryByRole('presentation')).not.toBeInTheDocument()
+  })
 })

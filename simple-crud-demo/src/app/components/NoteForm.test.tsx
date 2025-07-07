@@ -73,4 +73,18 @@ describe('NoteForm Component', () => {
     expect((titleInput as HTMLInputElement).value).toBe('')
     expect((contentInput as HTMLInputElement).value).toBe('')
   })
+
+  it('has the required attribute on title and content input fields for accessibility', () => {
+    render(
+      <ThemeProvider theme={theme}>
+        <NoteForm onCreate={() => {}} />
+      </ThemeProvider>
+    )
+    expect(screen.getByRole('textbox', { name: 'Title' })).toHaveAttribute(
+      'required'
+    )
+    expect(screen.getByRole('textbox', { name: 'Content' })).toHaveAttribute(
+      'required'
+    )
+  })
 })

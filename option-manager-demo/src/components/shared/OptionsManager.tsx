@@ -315,6 +315,9 @@ export const OptionsManager: React.FC<OptionsManagerProps> = ({
                                     onChange={() => toggleActive(option.id)}
                                     size='small'
                                     disabled={isLoading}
+                                    inputProps={{
+                                      'aria-label': `toggle-active-${option.id}`,
+                                    }}
                                   />
                                 </Tooltip>
 
@@ -322,6 +325,7 @@ export const OptionsManager: React.FC<OptionsManagerProps> = ({
                                   edge='end'
                                   onClick={() => handleOpenDialog(option)}
                                   disabled={isLoading}
+                                  aria-label={`edit-option-${option.id}`}
                                 >
                                   <EditIcon />
                                 </IconButton>
@@ -332,6 +336,7 @@ export const OptionsManager: React.FC<OptionsManagerProps> = ({
                                     onClick={() => handleDelete(option.id)}
                                     disabled={isLoading}
                                     color='error'
+                                    aria-label={`delete-option-${option.id}`}
                                   >
                                     <DeleteIcon />
                                   </IconButton>

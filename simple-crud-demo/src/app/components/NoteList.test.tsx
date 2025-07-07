@@ -61,4 +61,14 @@ describe('NoteList Component', () => {
     expect(onDelete).toHaveBeenCalledTimes(1)
     expect(onDelete).toHaveBeenCalledWith(mockNotes[0].id)
   })
+
+  it('renders an empty list when there are no notes', () => {
+    const { container } = render(
+      <ThemeProvider theme={theme}>
+        <NoteList notes={[]} onUpdate={() => {}} onDelete={() => {}} />
+      </ThemeProvider>
+    )
+    const listItems = container.querySelectorAll('li')
+    expect(listItems.length).toBe(0)
+  })
 })
