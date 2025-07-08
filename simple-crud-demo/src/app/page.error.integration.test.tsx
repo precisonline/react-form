@@ -29,6 +29,7 @@ describe('Home Component Integration Tests - Error Handling', () => {
   })
 
   it('displays an error message when creating a note fails', async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => {})
     const user = userEvent.setup()
     render(
       <ThemeProvider theme={theme}>
