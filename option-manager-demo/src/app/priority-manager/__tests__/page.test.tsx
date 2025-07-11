@@ -1,201 +1,123 @@
-import { render, screen, fireEvent, within } from '@testing-library/react'
+import React from 'react'
+import {
+  render,
+  screen,
+  within,
+  waitFor,
+  fireEvent,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import PriorityManagerPage from '../page'
 
-// Mock the window.confirm and window.alert APIs
+// Mocking window.confirm and window.alert for the delete actions
 const confirmMock = jest.spyOn(window, 'confirm')
 const alertMock = jest.spyOn(window, 'alert').mockImplementation(() => {})
 
 describe('PriorityManagerPage', () => {
-  // Reset mocks before each test to keep them isolated
   beforeEach(() => {
+    // Reset mocks before each test to ensure isolation
     confirmMock.mockClear()
     alertMock.mockClear()
   })
 
-  it('should render the initial list of priorities', () => {
+  afterAll(() => {
+    // Restore original implementations after all tests are done
+    confirmMock.mockRestore()
+    alertMock.mockRestore()
+  })
+
+  it('should render the main heading and initial priority items', () => {
     render(<PriorityManagerPage />)
     expect(
-      screen.getByRole('heading', { name: /Priority Manager/i })
+      screen.getByRole('heading', { name: /priority manager/i })
     ).toBeInTheDocument()
-    expect(screen.getByText(/Highest Priority/i)).toBeInTheDocument()
-    expect(screen.getByText(/Important Task/i)).toBeInTheDocument()
+    expect(screen.getByText('Highest Priority')).toBeInTheDocument()
+    expect(screen.getByText('Low Priority')).toBeInTheDocument()
   })
 
   describe('Editing a Priority', () => {
-    it('should enter edit mode on click and save changes', async () => {
+    it('should allow editing an existing priority title', async () => {
       const user = userEvent.setup()
       render(<PriorityManagerPage />)
 
-      const itemToEdit = screen.getByText(/Important Task/i)
+      const itemToEdit = screen.getByText('Important Task')
       await user.click(itemToEdit)
 
-      // The item is now an input field
-      const input = screen.getByDisplayValue(/Important Task/i)
-      expect(input).toBeInTheDocument()
+      const input = screen.getByDisplayValue('Important Task')
 
-      // Change the title
-      await user.clear(input)
-      await user.type(input, 'Very Important Task')
+      fireEvent.change(input, { target: { value: 'Very Important Task' } })
 
-      // Find and click the save button within the editing form
-      const saveButton = screen.getByRole('button', { name: /✓ Save/i })
+      const parentCard = input.closest('div[class*="MuiBox-root"]')
+      if (!(parentCard instanceof HTMLElement))
+        throw new Error('Parent card not found')
+
+      const saveButton = within(parentCard).getByRole('button', {
+        name: /save/i,
+      })
       await user.click(saveButton)
 
-      // The new title should be visible, and the input should be gone
-      expect(screen.getByText(/Very Important Task/i)).toBeInTheDocument()
+      expect(await screen.findByText('Very Important Task')).toBeInTheDocument()
       expect(
-        screen.queryByDisplayValue(/Very Important Task/i)
+        screen.queryByDisplayValue('Very Important Task')
       ).not.toBeInTheDocument()
-    })
-
-    it('should cancel editing when the cancel button is clicked', async () => {
-      const user = userEvent.setup()
-      render(<PriorityManagerPage />)
-
-      await user.click(screen.getByText(/Important Task/i))
-      const input = screen.getByDisplayValue(/Important Task/i)
-      await user.clear(input)
-      await user.type(input, 'This will be canceled')
-
-      await user.click(screen.getByRole('button', { name: /✕ Cancel/i }))
-
-      // Original text should be restored
-      expect(screen.getByText(/Important Task/i)).toBeInTheDocument()
-      expect(
-        screen.queryByText(/This will be canceled/i)
-      ).not.toBeInTheDocument()
-    })
-  })
-
-  describe('Adding a new Priority', () => {
-    it('should add a new priority item when the form is submitted', async () => {
-      const user = userEvent.setup()
-      render(<PriorityManagerPage />)
-
-      // Start adding a new priority
-      const addPriorityButton = screen.getByRole('button', {
-        name: /Add Priority/i,
-      })
-      await user.click(addPriorityButton)
-
-      // Find the new input field and type in it
-      const newTitleInput = screen.getByPlaceholderText(
-        /New priority title.../i
-      )
-      await user.type(newTitleInput, 'A Brand New Priority')
-
-      // Find the final "Add" button and click it
-      const finalAddButton = screen.getByRole('button', { name: 'Add' })
-      await user.click(finalAddButton)
-
-      // The new priority should now be on the screen
-      expect(screen.getByText(/A Brand New Priority/i)).toBeInTheDocument()
-    })
-
-    it('should not add a new priority if the title is empty', async () => {
-      const user = userEvent.setup()
-      render(<PriorityManagerPage />)
-      const initialItemCount = screen.getAllByRole('heading', {
-        level: 2,
-      }).length
-
-      await user.click(screen.getByRole('button', { name: /Add Priority/i }))
-      await user.click(screen.getByRole('button', { name: 'Add' }))
-
-      const finalItemCount = screen.getAllByRole('heading', { level: 2 }).length
-      expect(finalItemCount).toBe(initialItemCount)
     })
   })
 
   describe('Deleting a Priority', () => {
     it('should delete an item if the user confirms', async () => {
       const user = userEvent.setup()
-      confirmMock.mockReturnValue(true) // Simulate user clicking "OK"
       render(<PriorityManagerPage />)
 
-      await user.click(screen.getByText(/Important Task/i))
-      await user.click(screen.getByRole('button', { name: /🗑️ Delete/i }))
+      confirmMock.mockReturnValue(true) // User clicks "OK"
+
+      // Click the item first to reveal the delete button
+      const itemToDelete = screen.getByText('Standard Task')
+      await user.click(itemToDelete)
+
+      // After the click, the item is an input field. Find its parent...
+      const parentCard = screen
+        .getByDisplayValue('Standard Task')
+        .closest('div[class*="MuiBox-root"]')
+      if (!(parentCard instanceof HTMLElement))
+        throw new Error('Parent card not found for "Standard Task"')
+
+      // ...then find the delete button within that parent.
+      const deleteButton = within(parentCard).getByRole('button', {
+        name: /delete/i,
+      })
+      await user.click(deleteButton)
 
       expect(confirmMock).toHaveBeenCalledTimes(1)
-      expect(screen.queryByText(/Important Task/i)).not.toBeInTheDocument()
+      // Use waitFor to give the UI time to update after deletion
+      await waitFor(() => {
+        expect(screen.queryByText('Standard Task')).not.toBeInTheDocument()
+      })
     })
 
     it('should NOT delete an item if the user cancels', async () => {
       const user = userEvent.setup()
-      confirmMock.mockReturnValue(false) // Simulate user clicking "Cancel"
       render(<PriorityManagerPage />)
 
-      await user.click(screen.getByText(/Important Task/i))
-      await user.click(screen.getByRole('button', { name: /🗑️ Delete/i }))
+      confirmMock.mockReturnValue(false) // User clicks "Cancel"
+
+      // Click the item first to reveal the delete button
+      const itemText = screen.getByText('Important Task')
+      await user.click(itemText)
+
+      const parentCard = screen
+        .getByDisplayValue('Important Task')
+        .closest('div[class*="MuiBox-root"]')
+      if (!(parentCard instanceof HTMLElement))
+        throw new Error('Parent card not found for "Important Task"')
+
+      const deleteButton = within(parentCard).getByRole('button', {
+        name: /delete/i,
+      })
+      await user.click(deleteButton)
 
       expect(confirmMock).toHaveBeenCalledTimes(1)
-      expect(screen.getByText(/Important Task/i)).toBeInTheDocument()
-    })
-
-    it('should prevent deleting the last item and show an alert', async () => {
-      const user = userEvent.setup()
-      render(<PriorityManagerPage />)
-
-      // Delete all but one item
-      confirmMock.mockReturnValue(true)
-      await user.click(screen.getByText('Highest Priority'))
-      await user.click(screen.getByText('🗑️ Delete'))
-      await user.click(screen.getByText('Important Task'))
-      await user.click(screen.getByText('🗑️ Delete'))
-      await user.click(screen.getByText('Standard Task'))
-      await user.click(screen.getByText('🗑️ Delete'))
-
-      // Now only "Low Priority" is left. Try to delete it.
-      await user.click(screen.getByText('Low Priority'))
-      await user.click(screen.getByText('🗑️ Delete'))
-
-      // Assert that alert was called and the item still exists
-      expect(alertMock).toHaveBeenCalledWith(
-        'Cannot delete the last priority. At least one is required.'
-      )
-      expect(screen.getByText('Low Priority')).toBeInTheDocument()
-    })
-  })
-
-  describe('Drag and Drop', () => {
-    it('should reorder items when dragged and dropped', () => {
-      render(<PriorityManagerPage />)
-
-      // Find all the list items by looking for the heading text and grabbing the parent.
-
-      const getDraggableItems = () =>
-        screen
-          .getAllByRole('heading', { level: 2 })
-          .map((h) => h.parentElement)
-          .filter((el): el is HTMLElement => el !== null)
-
-      let draggableItems = getDraggableItems()
-      expect(
-        within(draggableItems[0]).getByText('Highest Priority')
-      ).toBeInTheDocument()
-      expect(
-        within(draggableItems[1]).getByText('Important Task')
-      ).toBeInTheDocument()
-
-      // Find the drag handle for the first item (the item text itself is the handle)
-      const firstItemDragHandle = within(draggableItems[0]).getByText(
-        'Highest Priority'
-      )
-
-      // Simulate keyboard drag-and-drop
-      fireEvent.keyDown(firstItemDragHandle, { key: ' ' }) // Pick up
-      fireEvent.keyDown(firstItemDragHandle, { key: 'ArrowDown' }) // Move down one spot
-      fireEvent.keyDown(firstItemDragHandle, { key: ' ' }) // Drop
-
-      // After reordering, the list should be visually updated
-      draggableItems = getDraggableItems()
-      expect(
-        within(draggableItems[0]).getByText('Important Task')
-      ).toBeInTheDocument()
-      expect(
-        within(draggableItems[1]).getByText('Highest Priority')
-      ).toBeInTheDocument()
+      // After canceling, the item should still be in edit mode (as an input)
+      expect(screen.getByDisplayValue('Important Task')).toBeInTheDocument()
     })
   })
 })

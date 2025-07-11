@@ -228,7 +228,7 @@ export default function PriorityManagerPage() {
                 minHeight: '200px',
               }}
             >
-              {items
+              {[...items]
                 .sort((a, b) => a.order - b.order)
                 .map((item, index) => {
                   const isEditingThis = editingId === item.id

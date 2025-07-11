@@ -28,11 +28,9 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   onClose,
   itemType,
   itemData,
-  onAction, // This prop receives the function from the parent
+  onAction,
 }) => {
-  // NOTE: The old internal `handleMenuAction` function has been removed.
-
-  const getMenuItems = (): MenuItemType[] => {
+  const getMenuItems = (): (MenuItemType | 'divider')[] => {
     const commonItems: MenuItemType[] = [
       { icon: <Edit fontSize='small' />, text: 'Edit', action: 'edit' },
       {
@@ -94,13 +92,19 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
         destructive: true,
       },
     ]
-    const items: MenuItemType[] = [...commonItems]
+
     if (itemType === 'task') {
-      items.push(...taskItems, ...destructiveItems)
+      return [
+        ...commonItems,
+        'divider',
+        ...taskItems,
+        'divider',
+        ...destructiveItems,
+      ]
     } else if (itemType === 'container') {
-      items.push(...containerItems)
+      return [...commonItems, 'divider', ...containerItems]
     }
-    return items
+    return commonItems
   }
 
   const menuItems = getMenuItems()
@@ -135,47 +139,45 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
       >
         <MenuList dense sx={{ py: 0.5 }}>
           {menuItems.map((item, index) => {
-            const isTask = itemType === 'task'
-            const showDivider =
-              (isTask && (index === 2 || index === 7)) ||
-              (!isTask && index === 2)
+            if (typeof item === 'string' && item === 'divider') {
+              return <Divider key={index} sx={{ my: 0.5 }} />
+            }
 
-            return [
-              <MenuItem
-                key={item.action}
-                // FIX: The onClick handler now calls the onAction prop from the parent.
-                onClick={() => onAction(item.action, itemData)}
-                sx={{
-                  px: 2,
-                  py: 1,
-                  borderRadius: 1,
-                  mx: 1,
-                  color: item.destructive ? 'error.main' : 'text.primary',
-                  '&:hover': {
-                    bgcolor: item.destructive
-                      ? 'rgba(239, 68, 68, 0.1)'
-                      : 'action.hover',
-                  },
-                }}
-              >
-                <ListItemIcon
+            if (typeof item === 'object') {
+              return (
+                <MenuItem
+                  key={item.action}
+                  onClick={() => onAction(item.action, itemData)}
                   sx={{
-                    color: 'inherit',
-                    minWidth: 36,
-                    '& .MuiSvgIcon-root': { fontSize: 18 },
+                    px: 2,
+                    py: 1,
+                    borderRadius: 1,
+                    mx: 1,
+                    color: item.destructive ? 'error.main' : 'text.primary',
+                    '&:hover': {
+                      bgcolor: item.destructive
+                        ? 'rgba(239, 68, 68, 0.1)'
+                        : 'action.hover',
+                    },
                   }}
                 >
-                  {item.icon}
-                </ListItemIcon>
-                <ListItemText
-                  primary={item.text}
-                  primaryTypographyProps={{ fontSize: 14, fontWeight: 500 }}
-                />
-              </MenuItem>,
-              showDivider ? (
-                <Divider key={`${item.action}-divider`} sx={{ my: 0.5 }} />
-              ) : null,
-            ]
+                  <ListItemIcon
+                    sx={{
+                      color: 'inherit',
+                      minWidth: 36,
+                      '& .MuiSvgIcon-root': { fontSize: 18 },
+                    }}
+                  >
+                    {item.icon}
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={item.text}
+                    primaryTypographyProps={{ fontSize: 14, fontWeight: 500 }}
+                  />
+                </MenuItem>
+              )
+            }
+            return null
           })}
         </MenuList>
       </Paper>
