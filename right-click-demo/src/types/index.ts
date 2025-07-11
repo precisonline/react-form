@@ -11,6 +11,14 @@ export type Task = {
   completed: boolean
 }
 
+// Define the shape for workspace-related data
+type WorkspaceData = {
+  type: 'workspace'
+}
+
+// Create a union type for all possible item data shapes
+export type ContextMenuItemData = Task | WorkspaceData
+
 export type TaskCardProps = {
   task: Task
   onContextMenu: (e: React.MouseEvent, itemType: string, itemData: Task) => void
@@ -21,7 +29,8 @@ export type ContextMenuProps = {
   anchorPosition: { x: number; y: number }
   onClose: () => void
   itemType: string
-  itemData: any
+  itemData: ContextMenuItemData // Use the specific union type
+  onAction: (action: string, itemData: ContextMenuItemData) => void // Use the specific union type
 }
 
 export type MenuItemType = {
@@ -34,5 +43,11 @@ export type MenuItemType = {
 export type ContextMenuState = {
   anchorPosition: { x: number; y: number }
   itemType: string
-  itemData: any
+  itemData: ContextMenuItemData // Use the specific union type
 } | null
+
+export type EditTaskFormProps = {
+  task: Task
+  onSave: (updatedTask: Task) => void
+  onCancel: () => void
+}

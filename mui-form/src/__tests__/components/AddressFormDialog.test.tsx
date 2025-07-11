@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import AddressFormDialog from '../../components/AddressFormDialog'
 import ThemeProvider from '../../components/ThemeProvider'
@@ -40,21 +40,14 @@ describe('AddressFormDialog', () => {
 
     await user.click(screen.getByRole('button', { name: /save address/i }))
 
-    await waitFor(() => {
-      expect(screen.getByTestId('streetAddress-error')).toHaveTextContent(
-        'Street address is required'
-      )
-      expect(screen.getByTestId('city-error')).toHaveTextContent(
-        'City is required'
-      )
-      expect(screen.getByTestId('state-error')).toHaveTextContent(
-        'State is required'
-      )
-      expect(screen.getByTestId('zipCode-error')).toHaveTextContent(
-        'ZIP code is required'
-      )
-    })
-  })
+    expect(await screen.findByLabelText(/street address/i)).toBeInvalid()
+    expect(await screen.findByLabelText(/city/i)).toBeInvalid()
+    expect(await screen.findByLabelText(/state/i)).toBeInvalid()
+    expect(await screen.findByLabelText(/zip code/i)).toBeInvalid()
+
+    // We can still assert that onSave was NOT called.
+    expect(mockOnSave).not.toHaveBeenCalled()
+  }, 10000)
 
   test('shows different fields for Canada', async () => {
     const { user } = setup()

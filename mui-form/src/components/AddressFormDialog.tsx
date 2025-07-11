@@ -170,7 +170,7 @@ export default function AddressFormDialog({
                         error={!!fieldError}
                         helperText={
                           fieldError?.message ? (
-                            <span data-testid={`${addressField.name}-error`}>
+                            <span data-testid={`error-${addressField.name}`}>
                               {fieldError.message}
                             </span>
                           ) : null

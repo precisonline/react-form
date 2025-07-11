@@ -70,6 +70,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         <IconButton
           size='small'
           onClick={() => onToggleComplete(task.id)}
+          aria-label={`Toggle completion for ${task.title}`}
           sx={{ mt: -0.5, '&:hover': { bgcolor: 'action.hover' } }}
         >
           {task.completed ? (

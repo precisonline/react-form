@@ -4,15 +4,15 @@ import React, { useState, useRef } from 'react'
 import { Box, Typography, ThemeProvider, CssBaseline } from '@mui/material'
 import { TaskCard } from './TaskCard'
 import { ContextMenu } from './ContextMenu'
+import { EditTaskForm } from './EditTaskForm'
 import { theme } from '@/theme/theme'
-import type { Task, ContextMenuState } from '@/types'
+import type { Task, ContextMenuState, ContextMenuItemData } from '@/types'
 
 const initialTasks: Task[] = [
   {
     id: 1,
     title: 'Design homepage mockup',
-    description:
-      'Create wireframes and high-fidelity mockups for the new homepage design.',
+    description: 'Create wireframes and high-fidelity mockups.',
     priority: 'high',
     status: 'In Progress',
     assignee: 'John Doe',
@@ -22,8 +22,7 @@ const initialTasks: Task[] = [
   {
     id: 2,
     title: 'Implement user authentication',
-    description:
-      'Set up login/signup functionality with JWT tokens and password reset flow.',
+    description: 'Set up login/signup functionality with JWT.',
     priority: 'medium',
     status: 'To Do',
     assignee: 'Jane Smith',
@@ -33,8 +32,7 @@ const initialTasks: Task[] = [
   {
     id: 3,
     title: 'Write comprehensive unit tests',
-    description:
-      'Add test coverage for all API endpoints and critical user flows.',
+    description: 'Add test coverage for all API endpoints.',
     priority: 'low',
     status: 'Done',
     assignee: 'Mike Johnson',
@@ -46,6 +44,8 @@ const initialTasks: Task[] = [
 export default function ContextMenuDemo() {
   const [tasks, setTasks] = useState<Task[]>(initialTasks)
   const [contextMenu, setContextMenu] = useState<ContextMenuState>(null)
+  const [editingTaskId, setEditingTaskId] = useState<number | null>(null)
+
   const containerRef = useRef<HTMLDivElement>(null)
 
   const handleToggleComplete = (taskId: number) => {
@@ -59,7 +59,7 @@ export default function ContextMenuDemo() {
   const handleContextMenu = (
     e: React.MouseEvent,
     itemType: string,
-    itemData: unknown
+    itemData: ContextMenuItemData
   ) => {
     e.preventDefault()
     setContextMenu({
@@ -71,6 +71,26 @@ export default function ContextMenuDemo() {
 
   const handleCloseContextMenu = () => {
     setContextMenu(null)
+  }
+
+  const handleMenuAction = (action: string, itemData: ContextMenuItemData) => {
+    if (action === 'edit' && 'id' in itemData) {
+      setEditingTaskId(itemData.id)
+    }
+    handleCloseContextMenu()
+  }
+
+  const handleSaveTask = (updatedTask: Task) => {
+    setTasks((currentTasks) =>
+      currentTasks.map((task) =>
+        task.id === updatedTask.id ? updatedTask : task
+      )
+    )
+    setEditingTaskId(null)
+  }
+
+  const handleCancelEdit = () => {
+    setEditingTaskId(null)
   }
 
   const handleContainerRightClick = (e: React.MouseEvent) => {
@@ -98,9 +118,8 @@ export default function ContextMenuDemo() {
           gutterBottom
           sx={{ mb: 2, color: 'text.primary', textAlign: 'center' }}
         >
-          ClickUp-style Context Menu Demo
+          Context Menu Demo
         </Typography>
-
         <Typography
           variant='body1'
           sx={{
@@ -113,10 +132,10 @@ export default function ContextMenuDemo() {
           Right-click on any task card to see task-specific actions, or
           right-click on the workspace for container actions.
         </Typography>
-
         <Box
           ref={containerRef}
           onContextMenu={handleContainerRightClick}
+          data-testid='workspace-container'
           sx={{
             width: '100%',
             maxWidth: 900,
@@ -128,22 +147,33 @@ export default function ContextMenuDemo() {
           }}
         >
           {tasks.map((task) => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              onContextMenu={handleContextMenu}
-              onToggleComplete={handleToggleComplete}
-            />
+            <Box key={task.id}>
+              {editingTaskId === task.id ? (
+                <EditTaskForm
+                  task={task}
+                  onSave={handleSaveTask}
+                  onCancel={handleCancelEdit}
+                />
+              ) : (
+                <TaskCard
+                  task={task}
+                  onContextMenu={(e, itemType, itemData) =>
+                    handleContextMenu(e, itemType, itemData)
+                  }
+                  onToggleComplete={handleToggleComplete}
+                />
+              )}
+            </Box>
           ))}
           <Box sx={{ height: 100, width: '100%' }} />
         </Box>
-
         {contextMenu && (
           <ContextMenu
             anchorPosition={contextMenu.anchorPosition}
             onClose={handleCloseContextMenu}
             itemType={contextMenu.itemType}
             itemData={contextMenu.itemData}
+            onAction={handleMenuAction}
           />
         )}
       </Box>

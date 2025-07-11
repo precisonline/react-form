@@ -28,11 +28,9 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   onClose,
   itemType,
   itemData,
+  onAction, // This prop receives the function from the parent
 }) => {
-  const handleMenuAction = (action: string) => {
-    console.log(`${action} clicked for:`, itemData)
-    onClose()
-  }
+  // NOTE: The old internal `handleMenuAction` function has been removed.
 
   const getMenuItems = (): MenuItemType[] => {
     const commonItems: MenuItemType[] = [
@@ -44,7 +42,6 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
       },
       { icon: <Share fontSize='small' />, text: 'Share', action: 'share' },
     ]
-
     const taskItems: MenuItemType[] = [
       {
         icon: <CheckCircle fontSize='small' />,
@@ -72,7 +69,6 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
         action: 'favorite',
       },
     ]
-
     const containerItems: MenuItemType[] = [
       {
         icon: <Assignment fontSize='small' />,
@@ -85,7 +81,6 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
         action: 'archive-all',
       },
     ]
-
     const destructiveItems: MenuItemType[] = [
       {
         icon: <Archive fontSize='small' />,
@@ -99,8 +94,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
         destructive: true,
       },
     ]
-
-    let items: MenuItemType[] = [...commonItems]
+    const items: MenuItemType[] = [...commonItems]
     if (itemType === 'task') {
       items.push(...taskItems, ...destructiveItems)
     } else if (itemType === 'container') {
@@ -137,13 +131,11 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
           py: 1,
           border: '1px solid',
           borderColor: 'divider',
-          boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
         }}
       >
         <MenuList dense sx={{ py: 0.5 }}>
           {menuItems.map((item, index) => {
             const isTask = itemType === 'task'
-
             const showDivider =
               (isTask && (index === 2 || index === 7)) ||
               (!isTask && index === 2)
@@ -151,7 +143,8 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
             return [
               <MenuItem
                 key={item.action}
-                onClick={() => handleMenuAction(item.action)}
+                // FIX: The onClick handler now calls the onAction prop from the parent.
+                onClick={() => onAction(item.action, itemData)}
                 sx={{
                   px: 2,
                   py: 1,

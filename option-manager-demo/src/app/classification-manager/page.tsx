@@ -1,14 +1,11 @@
-// src/app/classification-manager/page.tsx
 'use client'
 
 import { useState, useCallback } from 'react'
 import { Container, Typography, Box, Button } from '@mui/material'
 import { ArrowBack } from '@mui/icons-material'
 import Link from 'next/link'
-import {
-  OptionsManager,
-  type Option,
-} from '../../components/shared/OptionsManager'
+import { OptionsManager } from '../../components/shared/OptionsManager'
+import type { Option } from '../../app/types/options'
 
 export default function ClassificationManagerPage() {
   const [classifications, setClassifications] = useState<Option[]>([

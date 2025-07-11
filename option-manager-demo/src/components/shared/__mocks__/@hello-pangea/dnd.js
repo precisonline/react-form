@@ -1,5 +1,18 @@
 import React from 'react'
 
-export const DragDropContext = ({ children }) => <div>{children}</div>
-export const Droppable = ({ children }) => children({}, {})
-export const Draggable = ({ children }) => children({}, {})
+// This mock provides the necessary props that your components expect
+export const DragDropContext = ({ children }) => <>{children}</>
+export const Droppable = ({ children }) => <>{children({})}</>
+export const Draggable = ({ children }) => (
+  <>
+    {children(
+      {
+        draggableProps: {
+          style: {},
+        },
+        dragHandleProps: {},
+      },
+      {}
+    )}
+  </>
+)

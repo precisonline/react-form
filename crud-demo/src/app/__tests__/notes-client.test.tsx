@@ -51,10 +51,10 @@ describe('NotesClient', () => {
 
     render(<NotesClient initialNotes={[]} user={mockUser} />)
 
-    fireEvent.change(screen.getByLabelText('Title'), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'Title' }), {
       target: { value: 'New Note' },
     })
-    fireEvent.change(screen.getByLabelText('Content'), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'Content' }), {
       target: { value: 'New Content' },
     })
     fireEvent.click(screen.getByText('Add Note'))
