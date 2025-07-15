@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { ThemeProvider, createTheme } from '@mui/material/styles'
 import { Alert } from '@mui/material'
 import CssBaseline from '@mui/material/CssBaseline'
@@ -11,13 +10,7 @@ import NoteList from './components/NoteList'
 import NoteForm from './components/NoteForm'
 import EditNoteModal from './components/EditNoteModal'
 import Stack from '@mui/material/Stack'
-
-interface Note {
-  id: string
-  title: string
-  content: string
-  created_at: string
-}
+import { Note } from '../../lib/types'
 
 const darkTheme = createTheme({
   palette: {
@@ -30,73 +23,69 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null)
   const [openModal, setOpenModal] = useState(false)
   const [selectedNote, setSelectedNote] = useState<Note | null>(null)
-  const supabase = createClientComponentClient()
 
+  // getNotes now fetches from your API
   const getNotes = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('notes')
-      .select('*')
-      .order('created_at', { ascending: false })
-
-    if (error) {
-      console.error('Error fetching notes:', error)
-      setError(error.message)
-    } else {
-      setNotes((data as Note[]) || [])
+    try {
+      const response = await fetch('/api/notes')
+      if (!response.ok) {
+        throw new Error('Failed to fetch notes')
+      }
+      const data = await response.json()
+      setNotes(data)
+    } catch (err: any) {
+      setError(err.message)
     }
-  }, [supabase])
+  }, [])
 
   useEffect(() => {
     getNotes()
   }, [getNotes])
 
-  const handleCreateNote = async (newNote: Omit<Note, 'id' | 'created_at'>) => {
+  // handleCreateNote now uses fetch with a POST request
+  const handleCreateNote = async (newNote: Omit<Note, 'id' | 'createdAt'>) => {
     setError(null)
-
-    const { error: insertError } = await supabase
-      .from('notes')
-      .insert([newNote])
-      .select()
-      .single()
-
-    if (insertError) {
-      console.error('Error creating note:', insertError)
-      setError(insertError.message)
-    } else {
-      await getNotes() // Refetch notes to get the latest list
+    try {
+      const response = await fetch('/api/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newNote),
+      })
+      if (!response.ok) throw new Error('Failed to create note')
+      await getNotes() // Refetch notes
+    } catch (err: any) {
+      setError(err.message)
     }
   }
 
+  // handleUpdateNote now uses fetch with a PUT request
   const handleUpdateNote = async (updatedNote: Note) => {
     setError(null)
-    const { error: updateError } = await supabase
-      .from('notes')
-      .update({ title: updatedNote.title, content: updatedNote.content })
-      .eq('id', updatedNote.id)
-      .select()
-      .single()
-
-    if (updateError) {
-      console.error('Error updating note:', updateError)
-      setError(updateError.message)
-    } else {
-      await getNotes() // Refetch notes to get the latest list
+    try {
+      const response = await fetch(`/api/notes/${updatedNote.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedNote),
+      })
+      if (!response.ok) throw new Error('Failed to update note')
+      await getNotes() // Refetch notes
       setOpenModal(false)
+    } catch (err: any) {
+      setError(err.message)
     }
   }
 
-  const handleDeleteNote = async (id: string) => {
+  // handleDeleteNote now uses fetch with a DELETE request
+  const handleDeleteNote = async (id: number) => {
     setError(null)
-    const { error: deleteError } = await supabase
-      .from('notes')
-      .delete()
-      .eq('id', id)
-
-    if (deleteError) {
-      console.error('Error deleting note:', deleteError)
-      setError(deleteError.message)
-    } else {
-      await getNotes() // Refetch notes to get the latest list
+    try {
+      const response = await fetch(`/api/notes/${id}`, {
+        method: 'DELETE',
+      })
+      if (!response.ok) throw new Error('Failed to delete note')
+      await getNotes() // Refetch notes
+    } catch (err: any) {
+      setError(err.message)
     }
   }
 
@@ -115,13 +104,7 @@ export default function Home() {
       <CssBaseline />
       <Container maxWidth='md'>
         <Stack spacing={3} sx={{ mt: 4 }}>
-          <Typography
-            variant='h4'
-            component='h1'
-            sx={{
-              py: 3,
-            }}
-          >
+          <Typography variant='h4' component='h1' sx={{ py: 3 }}>
             Notes
           </Typography>
 

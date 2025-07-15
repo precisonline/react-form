@@ -2,13 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Modal, Box, TextField, Button, Typography } from '@mui/material'
-
-interface Note {
-  id: string
-  title: string
-  content: string
-  created_at: string
-}
+import { Note } from '../../../lib/types'
 
 interface EditNoteModalProps {
   open: boolean
@@ -23,8 +17,8 @@ const EditNoteModal: React.FC<EditNoteModalProps> = ({
   note,
   onUpdate,
 }) => {
-  const [title, setTitle] = useState('')
-  const [content, setContent] = useState('')
+  const [title, setTitle] = useState<string | null>(null)
+  const [content, setContent] = useState<string | null>(null)
 
   useEffect(() => {
     if (note) {
