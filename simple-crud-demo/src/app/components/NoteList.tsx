@@ -4,13 +4,7 @@ import React from 'react'
 import { List, ListItem, ListItemText, IconButton } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/DeleteOutline'
 import EditIcon from '@mui/icons-material/Edit'
-
-interface Note {
-  id: string
-  title: string
-  content: string
-  created_at: string
-}
+import { Note } from '../../../lib/types'
 
 interface NoteListProps {
   notes: Note[]

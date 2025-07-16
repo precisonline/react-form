@@ -2,13 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Modal, Box, TextField, Button, Typography } from '@mui/material'
-
-interface Note {
-  id: string
-  title: string
-  content: string
-  created_at: string
-}
+import { Note } from '../../../lib/types'
 
 interface EditNoteModalProps {
   open: boolean
